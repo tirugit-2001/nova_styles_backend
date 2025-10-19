@@ -34,7 +34,7 @@ const router = express.Router();
  *       200:
  *         description: Products fetched successfully
  */
-router.post("/", upload.single("image"), productController.createProduct);
+router.post("/", productController.createProduct);
 router.get("/", productController.getProducts);
 router.get("/:id", productController.getProductById);
 /**
@@ -67,6 +67,7 @@ router.get("/:id", productController.getProductById);
  *       200:
  *         description: Product deleted
  */
-router.put("/:id", upload.single("image"), productController.updateProduct);
+router.put("/:id", productController.updateProduct);
 router.delete("/:id", productController.deleteProduct);
 export default router;
+upload.single("image");

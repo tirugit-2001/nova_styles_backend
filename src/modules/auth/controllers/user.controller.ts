@@ -10,6 +10,7 @@ const register = async (
 ): Promise<any> => {
   try {
     const { username, email, password, phone } = req.body;
+    console.log(username);
     if (!username || !email || !password || !phone) {
       return res.status(400).send("All fields are required");
     }
@@ -23,6 +24,7 @@ const register = async (
       .status(201)
       .send({ message: "User created successfully", result });
   } catch (e) {
+    console.log(e);
     next(e);
   }
 };
