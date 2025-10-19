@@ -10,5 +10,6 @@ const productSchema = Joi.object({
   print: Joi.array().items(Joi.string()).min(1).required(),
   installation: Joi.array().items(Joi.string()).min(1).required(),
   application: Joi.array().items(Joi.string()).min(1).required(),
+  // imageUrl: Joi.string().required(),
 });
 export { productSchema };
