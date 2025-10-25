@@ -23,6 +23,7 @@ const createProduct = async (
 /**********get  product********/
 const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log("inside get products controller");
     const products = await productService.getProducts();
     res.status(200).send({
       message: "Products fetched successfully",

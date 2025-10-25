@@ -57,7 +57,7 @@ const verifyPayment = async (data: any) => {
     razorpay_payment_id,
     razorpay_signature,
     userId,
-    addressId,
+    address,
     items,
     userEmail,
     paymentMethod,
@@ -91,7 +91,7 @@ const verifyPayment = async (data: any) => {
     const order = await orderService.createOrder(
       userId,
       items,
-      addressId,
+      address,
       paymentMethod,
       paymentDoc?._id as string,
       session

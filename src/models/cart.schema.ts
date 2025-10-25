@@ -14,7 +14,6 @@ const cartSchema = new Schema<ICart>(
         quantity: { type: Number, required: true, min: 1 },
       },
     ],
-    totalPrice: { type: Number, required: true, default: 0 },
   },
   { timestamps: true }
 );

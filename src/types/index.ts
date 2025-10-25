@@ -15,7 +15,7 @@ interface IAddress extends Document {
 }
 
 interface ICartItem {
-  product: mongoose.Schema.Types.ObjectId | string;
+  product: mongoose.Schema.Types.ObjectId | string | any;
   quantity: number;
 }
 interface ICartInput {
