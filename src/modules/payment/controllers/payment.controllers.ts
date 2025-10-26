@@ -7,10 +7,10 @@ const createPaymentOrder = async (
   next: NextFunction
 ) => {
   try {
-    const { userId, amount } = req.body;
+    const { userId, items } = req.body;
     const { razorpayOrder, payment } = await paymentService.createPaymentOrder(
       userId,
-      amount
+      items
     );
     res.status(200).send({
       message: "Payment order created",

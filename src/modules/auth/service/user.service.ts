@@ -12,7 +12,7 @@ const createUser = async (
 ): Promise<any> => {
   const result = await userRepository.findByEmail(email);
   if (result) {
-    throw new Error("User already exists");
+    throw new Apperror("User already exists", 409);
   }
   const hashedPassword = hashPassword(password);
   return await userRepository.createUser(

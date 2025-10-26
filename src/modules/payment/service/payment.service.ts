@@ -5,6 +5,7 @@ import orderService from "../../orders/service/order.service";
 import mongoose from "mongoose";
 import Apperror from "../../../utils/apperror";
 import productRepository from "../../products/repository/product.repository";
+import { emailQueue } from "../../../queues/email.queue";
 const createPaymentOrder = async (userId: string, items: any[]) => {
   const products = await Promise.all(
     items.map(async (item) => {
@@ -37,14 +38,28 @@ const createPaymentOrder = async (userId: string, items: any[]) => {
   return { razorpayOrder, payment };
 };
 
+const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
+  await emailQueue.add("sendPaymentEmail", {
+    to: userEmail,
+    subject: "Payment Successful! Order Confirmed",
+    html: `
+      <h1>Thank you for your order!</h1>
+      <p>Your payment has been successfully processed.</p>
+      <p><strong>Order ID:</strong> ${order._id}</p>
+      <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+      <p>We will start processing your order soon.</p>
+    `,
+  });
+};
 const verifyPayment = async (data: any) => {
   const {
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
     userId,
-    addressId,
+    address,
     items,
+    userEmail,
     paymentMethod,
   } = data;
 
@@ -76,7 +91,7 @@ const verifyPayment = async (data: any) => {
     const order = await orderService.createOrder(
       userId,
       items,
-      addressId,
+      address,
       paymentMethod,
       paymentDoc?._id as string,
       session
@@ -87,6 +102,11 @@ const verifyPayment = async (data: any) => {
     }
     await session.commitTransaction();
     session.endSession();
+    if (userEmail) {
+      sendPaymentSuccessEmail(userEmail, order).catch((err) =>
+        console.error("Error adding email job:", err)
+      );
+    }
 
     return { payment: paymentDoc, order };
   } catch (err) {

@@ -9,20 +9,22 @@ const register = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const { username, email, password, phone } = req.body;
+    const { name: username, email, password, phone } = req.body;
+    console.log(username);
     if (!username || !email || !password || !phone) {
       return res.status(400).send("All fields are required");
     }
-    const result = await userService.createUser(
-      username,
-      email,
-      password,
-      phone
-    );
-    return res
-      .status(201)
-      .send({ message: "User created successfully", result });
+    const data = await userService.createUser(username, email, password, phone);
+    return res.status(201).send({
+      message: "User created successfully",
+      newUser: {
+        email: data.email,
+        phone: data.phone,
+        username: data.username,
+      },
+    });
   } catch (e) {
+    console.log(e);
     next(e);
   }
 };

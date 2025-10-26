@@ -7,6 +7,7 @@ import orderrouter from "../modules/orders/routes/";
 import paymentrouter from "../modules/payment/routes";
 import WebFrontRounter from "../modules/webFront/routes";
 
+import userrouter from "../modules/users/routes";
 router.use("/auth", authrouter);
 router.use("/product", productrouter);
 router.use("/cart", cartrouter);
@@ -16,4 +17,5 @@ router.use("/payments", paymentrouter);
 router.use("/heroContent", WebFrontRounter);
 
 
+router.use("/users", userrouter);
 export default router;

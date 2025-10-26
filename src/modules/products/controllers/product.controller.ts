@@ -11,6 +11,8 @@ const createProduct = async (
   next: NextFunction
 ) => {
   try {
+    console.log(req.body);
+    console.log(req.file);
     const validatedData = validate(productSchema, req.body);
     const product = await productService.createProduct(validatedData, req.file);
     res.status(201).json({ message: "Product created", product });
@@ -21,14 +23,13 @@ const createProduct = async (
 /**********get  product********/
 const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log("inside get products controller");
     const products = await productService.getProducts();
-    res
-      .status(200)
-      .send({
-        message: "Products fetched successfully",
-        success: true,
-        products,
-      });
+    res.status(200).send({
+      message: "Products fetched successfully",
+      success: true,
+      products,
+    });
   } catch (err) {
     next(err);
   }
@@ -71,7 +72,10 @@ const deleteProduct = async (
   next: NextFunction
 ) => {
   try {
-    await productService.deleteProduct(req.params.id);
+    console.log(req.params.id);
+    const result = await productService.deleteProduct(req.params.id);
+    console.log(result);
+
     res.status(200).json({ message: "Product deleted" });
   } catch (err) {
     next(err);
