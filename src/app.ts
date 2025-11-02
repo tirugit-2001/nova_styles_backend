@@ -5,6 +5,7 @@ import { Request, Response } from "express";
 import router from "./routes";
 import { specs, swaggerUi } from "./config/swaggerConfig";
 import errorHandler from "./middlewares/errormiddleware";
+import cookieParser from "cookie-parser";
 const app = express();
 app.use(
   cors({
@@ -13,7 +14,9 @@ app.use(
     credentials: true,
   })
 );
+app.use(cookieParser());
 app.use(express.json());
+app.use("/api/webhook", express.raw({ type: "application/json" }));
 app.use(helmet());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 app.use("/health", (req: Request, res: Response) => {

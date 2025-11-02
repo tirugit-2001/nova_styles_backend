@@ -1,10 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IPayment } from "../types";
 
-const paymentSchema = new Schema<IPayment>(
+const paymentSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    orderId: { type: Schema.Types.ObjectId, ref: "Order" },
+
     razorpayOrderId: { type: String, required: true },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
@@ -16,6 +16,11 @@ const paymentSchema = new Schema<IPayment>(
       default: "created",
     },
     method: { type: String },
+    verifiedVia: {
+      type: String,
+      enum: ["client-verify", "webhook"],
+      default: null,
+    },
     error: {
       code: String,
       description: String,

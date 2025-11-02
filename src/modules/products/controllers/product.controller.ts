@@ -17,6 +17,7 @@ const createProduct = async (
     const product = await productService.createProduct(validatedData, req.file);
     res.status(201).json({ message: "Product created", product });
   } catch (err) {
+    console.log(err)
     next(err);
   }
 };
@@ -31,6 +32,7 @@ const getProducts = async (req: Request, res: Response, next: NextFunction) => {
       products,
     });
   } catch (err) {
+    console.log(err)
     next(err);
   }
 };

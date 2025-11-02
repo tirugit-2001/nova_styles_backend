@@ -7,9 +7,26 @@ const addToCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new Apperror("User not authenticated", 401);
 
-    const { productId, quantity } = req.body;
+    const {
+      productId,
+      quantity,
+      area,
+      selectedColor,
+      selectedTexture,
+      name,
+      image,
+    } = req.body;
     const userId = req.user._id;
-    const cart = await cartService.addToCart(productId, quantity, userId);
+    const cart = await cartService.addToCart(
+      productId,
+      quantity,
+      area,
+      selectedColor,
+      selectedTexture,
+      name,
+      image,
+      userId
+    );
 
     res.status(201).send({ success: true, message: "Item added", cart });
   } catch (e) {
@@ -24,9 +41,11 @@ const getCart = async (req: Request, res: Response, next: NextFunction) => {
 
     const userId = req.user._id;
     const cart = await cartService.getCart(userId);
-
+    console.log("car t card ");
+    console.log(cart);
     res.status(200).send({ success: true, cart });
   } catch (e) {
+    console.log(e);
     next(e);
   }
 };
@@ -73,13 +92,17 @@ const updateQuantity = async (
 const mergeCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new Apperror("User not authenticated", 401);
-
+    console.log("inside merge cart");
+    console.log(req.user);
     const { guestCart } = req.body;
+    console.log(guestCart);
     const userId = req.user._id;
     const cart = await cartService.mergeCart(guestCart, userId);
-
+    console.log("cart");
+    console.log(cart);
     res.status(200).send({ success: true, message: "Cart merged", cart });
   } catch (e) {
+    console.log(e);
     next(e);
   }
 };

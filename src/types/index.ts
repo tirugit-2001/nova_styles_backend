@@ -11,13 +11,22 @@ interface IAddress extends Document {
   state: string;
   postalCode: string;
   country: string;
+  email: string;
   isDefault?: boolean;
+  gstin?: string;
 }
 
 interface ICartItem {
-  product: mongoose.Schema.Types.ObjectId | string | any;
+  product: mongoose.Schema.Types.ObjectId | string | any; // product reference
   quantity: number;
+  area: number; // area in sq. ft
+  selectedColor: string; // selected color
+  selectedTexture: string; // selected texture
+  image: string;
+  name: string;
+  _id?: string;
 }
+
 interface ICartInput {
   user: mongoose.Schema.Types.ObjectId | string;
   items: ICartItem[];
@@ -95,6 +104,7 @@ declare global {
       user?: {
         _id: string;
         email?: string;
+        deviceId?: string;
       };
     }
   }

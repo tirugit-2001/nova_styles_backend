@@ -42,6 +42,7 @@ const deleteContent = async (id: string) => {
   return true;
 };
 
+const postContact = async (data: any) => {};
 export default {
   createContent,
   getContentBySection,

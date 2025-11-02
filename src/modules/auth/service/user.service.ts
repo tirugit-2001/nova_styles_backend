@@ -56,27 +56,6 @@ const loginUser = async (
 };
 
 /******************refresh***************** */
-// const refreshRefreshToken = async (refreshToken: string): Promise<any> => {
-//   console.log("refreshToken ", refreshToken);
-//   const payload = verifyRefreshToken(refreshToken) as any;
-//   console.log(payload);
-//   const tokenDoc: any = await userRepository.findSession(
-//     payload.userId,
-//     payload.deviceId
-//   );
-//   console.log(tokenDoc);
-//   if (!tokenDoc) throw new Apperror("Invalid token", 403);
-
-//   const { accessToken, refreshToken: newRefresh } = generateTokens({
-//     userId: payload.userId,
-//     username: payload.username,
-//     email: payload.email,
-//     deviceId: payload.deviceId,
-//   });
-//   tokenDoc.refreshToken = newRefresh;
-//   await tokenDoc.save();
-//   return { accessToken, refreshToken: newRefresh };
-// };
 
 const refreshRefreshToken = async (refreshToken: string): Promise<any> => {
   const payload = verifyRefreshToken(refreshToken) as any;
@@ -117,10 +96,19 @@ const logoutAllDevices = async (userId: string): Promise<void> => {
   }
 };
 
+const checkSession = async (useremail: string) => {
+  const userData = await userRepository.findByEmail(useremail);
+  if (!userData) {
+    throw new Apperror("No session found", 404);
+  }
+  return userData;
+};
+
 export default {
   createUser,
   loginUser,
   refreshRefreshToken,
   logoutFromDevice,
   logoutAllDevices,
+  checkSession,
 };

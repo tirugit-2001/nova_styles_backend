@@ -11,9 +11,10 @@ const generateTokens = (payload: {
 }) => {
   const accessToken = jwt.sign(
     {
-      userId: payload.userId,
+      _id: payload.userId,
       username: payload.username,
       email: payload.email,
+      deviceId: payload.deviceId,
     },
     config.jwtAccessTokenSecret,
     { expiresIn: "15m" }

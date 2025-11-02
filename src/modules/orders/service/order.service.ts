@@ -16,18 +16,25 @@ const createOrder = async (
     throw new Apperror("Session should not be provided externally", 500);
 
   let addressId: string;
+  console.log(addressOrId);
 
-  if (typeof addressOrId === "string") {
+  console.log("dohohohohoho");
+  if (typeof addressOrId.addressId === "string") {
     // Existing address
+    if (!addressOrId.addressId) {
+      throw new Apperror("address id not found ", 404);
+    }
     const existingAddress: any = await Address.findOne({
-      _id: addressOrId,
+      _id: addressOrId?.addressId,
       user: userId,
     }).session(session);
     if (!existingAddress) throw new Apperror("Address not found", 404);
     addressId = existingAddress._id.toString();
   } else {
-    // New address
     const addr = addressOrId;
+
+    console.log(addr);
+    console.log("dafafda");
     if (
       !addr.firstName ||
       !addr.lastName ||
@@ -36,7 +43,8 @@ const createOrder = async (
       !addr.city ||
       !addr.state ||
       !addr.postalCode ||
-      !addr.country
+      !addr.country ||
+      !addr.email
     ) {
       throw new Apperror("Incomplete address information", 400);
     }
@@ -49,7 +57,7 @@ const createOrder = async (
 
   const productDetails = await Promise.all(
     items.map(async (item) => {
-      const product = await Product.findById(item.productId).session(session);
+      const product = await Product.findById(item._id).session(session);
       if (!product) throw new Apperror("Product not found", 404);
       if (product.stock < item.quantity)
         throw new Apperror(`Not enough stock for ${product.name}`, 400);
@@ -63,12 +71,15 @@ const createOrder = async (
         imageUrl: product.imageUrl,
         price: product.price,
         quantity: item.quantity,
+        selectedTexture: item.selectedTexture,
+        selectedColor: item.selectedColor,
+        area: item.area,
       };
     })
   );
 
   const totalAmount = productDetails.reduce(
-    (sum, i) => sum + i.price * i.quantity,
+    (sum, i) => sum + i.price * i.quantity * (i.area == 0 ? 1 : i.area),
     0
   );
 

@@ -12,8 +12,8 @@ router.post(
   upload.single("image"),
   productController.createProduct
 );
-router.get("/", verifyAdmin, productController.getProducts);
-router.get("/:id", verifyAdmin, productController.getProductById);
+router.get("/", verifyUser, verifyAdmin, productController.getProducts);
+router.get("/:id", verifyUser, verifyAdmin, productController.getProductById);
 router.put(
   "/:id",
   verifyUser,

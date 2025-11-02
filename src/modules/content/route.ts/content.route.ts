@@ -20,6 +20,8 @@ router.put(
   upload.single("image"),
   contentController.updateContent
 );
+
+router.post("/contact-form", contentController.postContactForm);
 router.delete("/:id", verifyAdmin, contentController.deleteContent);
 
 export default router;

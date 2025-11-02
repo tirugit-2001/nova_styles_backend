@@ -72,10 +72,12 @@ const deleteContent = async (
   }
 };
 
+const postContactForm = () => {};
 export default {
   createContent,
   getContentBySection,
   updateContent,
   deleteContent,
   getContentById,
+  postContactForm,
 };

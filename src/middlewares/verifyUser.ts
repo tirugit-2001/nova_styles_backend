@@ -13,6 +13,8 @@ const verifyUser = async (
       throw new Apperror("Access token is missing. Please log in.", 401);
     }
     const decoded = verifyAccessToken(accessToken);
+    console.log(decoded);
+    console.log("decoded");
     if (!decoded) {
       throw new Apperror("Invalid or expired access token.", 403);
     }

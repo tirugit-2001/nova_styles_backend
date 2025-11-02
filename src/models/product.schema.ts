@@ -18,6 +18,10 @@ const productSchema = new mongoose.Schema(
       type: String,
       maxlength: [500, "Description cannot exceed 500 characters"],
     },
+    oldPrice: {
+      type: Number,
+      maxlength: [0, "Price cannot be negative"],
+    },
     stock: {
       type: Number,
       default: 0,

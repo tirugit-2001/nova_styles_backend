@@ -6,16 +6,33 @@ import mongoose from "mongoose";
 import Apperror from "../../../utils/apperror";
 import productRepository from "../../products/repository/product.repository";
 import { emailQueue } from "../../../queues/email.queue";
-const createPaymentOrder = async (userId: string, items: any[]) => {
+import config from "../../../config/config";
+const createPaymentOrder = async (
+  userId: string,
+  items: any[],
+  addressOrId: string
+) => {
+  console.log(items);
+  console.log(addressOrId);
   const products = await Promise.all(
     items.map(async (item) => {
-      const product = await productRepository.findById(item.productId);
+      const product = await productRepository.findById(item._id);
       if (!product) throw new Apperror("Product not found", 404);
-      return { price: product.price, quantity: item.quantity };
+      return {
+        _id: item._id,
+        price: product.price,
+        quantity: item.quantity,
+        area: item.area,
+        selectedColor: item.selectedColor,
+        selectedTexture: item.selectedTexture,
+        image: item.image,
+        name: product.name,
+      };
     })
   );
   const amount = products.reduce(
-    (sum: number, item: any) => sum + item.price * item.quantity,
+    (sum: number, item: any) =>
+      sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
     0
   );
 
@@ -23,6 +40,12 @@ const createPaymentOrder = async (userId: string, items: any[]) => {
     amount: amount * 100,
     currency: "INR",
     receipt: `order_rcpt_${Date.now()}`,
+    notes: {
+      userId: userId,
+      addressId: addressOrId || "",
+      items: JSON.stringify(items),
+      paymentMethod: "razorpay",
+    },
   };
 
   const razorpayOrder = await razorpay.orders.create(options);
@@ -39,18 +62,29 @@ const createPaymentOrder = async (userId: string, items: any[]) => {
 };
 
 const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
-  await emailQueue.add("sendPaymentEmail", {
-    to: userEmail,
-    subject: "Payment Successful! Order Confirmed",
-    html: `
-      <h1>Thank you for your order!</h1>
-      <p>Your payment has been successfully processed.</p>
-      <p><strong>Order ID:</strong> ${order._id}</p>
-      <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
-      <p>We will start processing your order soon.</p>
-    `,
-  });
+  console.log("🔵 Attempting to add email job for:", userEmail);
+
+  try {
+    const job = await emailQueue.add("sendPaymentEmail", {
+      to: userEmail,
+      subject: "Payment Successful! Order Confirmed",
+      html: `
+        <h1>Thank you for your order!</h1>
+        <p>Your payment has been successfully processed.</p>
+        <p><strong>Order ID:</strong> ${order._id}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p>We will start processing your order soon.</p>
+      `,
+    });
+
+    console.log("✅ Email job added successfully:", job.id);
+    return job;
+  } catch (error) {
+    console.error("❌ Error adding email job:", error);
+    throw error;
+  }
 };
+
 const verifyPayment = async (data: any) => {
   const {
     razorpay_order_id,
@@ -62,7 +96,7 @@ const verifyPayment = async (data: any) => {
     userEmail,
     paymentMethod,
   } = data;
-
+  console.log(userEmail);
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -85,8 +119,10 @@ const verifyPayment = async (data: any) => {
       razorpayPaymentId: razorpay_payment_id,
       razorpaySignature: razorpay_signature,
       status: "success",
+      verifiedVia: "client-verify",
     });
 
+    console.log(paymentDoc);
     // create order safely
     const order = await orderService.createOrder(
       userId,
@@ -103,6 +139,8 @@ const verifyPayment = async (data: any) => {
     await session.commitTransaction();
     session.endSession();
     if (userEmail) {
+      console.log("sendidnddnnddndndndndnd");
+      console.log(userEmail);
       sendPaymentSuccessEmail(userEmail, order).catch((err) =>
         console.error("Error adding email job:", err)
       );

@@ -20,10 +20,18 @@ const createCart = async (data: any, session?: mongoose.ClientSession) => {
 };
 
 const save = async (cart: any, session?: mongoose.ClientSession) => {
+  let savedCart;
+
   if (session) {
-    return await cart.save({ session });
+    savedCart = await cart.save({ session });
+  } else {
+    savedCart = await cart.save();
   }
-  return await cart.save();
+
+  // Populate after saving
+  await savedCart.populate("items.product");
+
+  return savedCart;
 };
 
 export default { findOne, createCart, save };

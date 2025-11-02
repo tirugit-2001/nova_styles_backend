@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import userService from "../service/user.service";
 import config from "../../../config/config";
 import Apperror from "../../../utils/apperror";
+import user from "../../../models/user.schema";
 
 const register = async (
   req: Request,
@@ -62,38 +63,6 @@ const login = async (
   }
 };
 
-// const login = async (req: Request, res: Response): Promise<any> => {
-//   const { email, password, deviceId } = req.body;
-//   const user = await User.findOne({ email });
-//   if (!user || !(await bcrypt.compare(password, user.password))) {
-//     return res.status(401).json({ message: "Invalid credentials" });
-//   }
-
-//   const { accessToken, refreshToken } = generateToken({
-//     userId: user._id as string,
-//     deviceId: deviceId,
-//     username: user.username,
-//     email: user.email,
-//   });
-
-//   const result = await Sessionmodel.updateOne(
-//     { userId: user._id, deviceId }, // Find by user and device
-//     { $set: { refreshToken, createdAt: new Date() } }, // Update refresh token
-//     { upsert: true } // If not found, insert new document
-//   );
-
-//   console.log(result);
-//   res.json({ accessToken, refreshToken, user });
-//   try {
-//   } catch (e) {
-//     console.log(e);
-//     return res.status(401).send({
-//       message: "Something went wrong",
-//       success: "false",
-//       e,
-//     });
-//   }
-// };
 /******************refresh***************** */
 const refreshRefreshToken = async (
   req: Request,
@@ -101,7 +70,8 @@ const refreshRefreshToken = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const { refreshToken: payloadRefresh } = req.body;
+    const { refreshToken: payloadRefresh } = req.cookies;
+    console.log(req.cookies);
     console.log("refreshToken ", payloadRefresh);
     if (!payloadRefresh) {
       throw new Apperror("No token provided", 401);
@@ -137,10 +107,16 @@ const logoutFromDevice = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const { deviceId } = req.body;
-    const id = req.params.id;
-    console.log(deviceId);
-    const result = await userService.logoutFromDevice(id, deviceId);
+    const data = req?.user;
+    console.log("data");
+    console.log(data);
+    if (!data?._id || !data.deviceId) {
+      throw new Apperror("User credentials not found", 404);
+    }
+    const result = await userService.logoutFromDevice(
+      data?._id,
+      data?.deviceId
+    );
     console.log(result);
     return res
       .status(200)
@@ -156,7 +132,10 @@ const logoutAllDevices = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const userId = req.params.id;
+    const userId = req?.user?._id;
+    if (!userId) {
+      throw new Apperror("no user Id found", 404);
+    }
     console.log(userId);
     const data = await userService.logoutAllDevices(userId);
     return res.status(200).send({
@@ -168,10 +147,34 @@ const logoutAllDevices = async (
     next(e);
   }
 };
+
+const checkSession = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user?.email) {
+      throw new Apperror("No session found", 404);
+    }
+    const userData = await userService.checkSession(req?.user?.email);
+    return res.status(200).send({
+      message: "Session found",
+      user_info: {
+        email: userData.email,
+        username: userData.username,
+        phone: userData.phone,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+};
 export {
   register,
   login,
   refreshRefreshToken,
   logoutFromDevice,
   logoutAllDevices,
+  checkSession,
 };
