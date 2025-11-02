@@ -21,6 +21,7 @@ const config = {
   claudinary_api_key: process.env.CLOUDINARY_API_KEY,
   claudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
   claudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  adminEmail: process.env.ADMIN_EMAIL,
 };
 
 export default config;
