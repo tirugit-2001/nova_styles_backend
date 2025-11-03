@@ -42,6 +42,7 @@ const loginUser = async (
     email: existingUser.email,
     username: existingUser.username,
     deviceId: deviceId,
+    role: existingUser.role || "user", // Include user role in token
   });
   const result = await userRepository.updateSession(
     existingUser._id.toString(),
@@ -64,11 +65,13 @@ const refreshRefreshToken = async (refreshToken: string): Promise<any> => {
     payload.deviceId
   );
   if (!session) throw new Apperror("Invalid session or token expired", 403);
+  // Include role from payload (refresh token) or default to "user"
   const { accessToken, refreshToken: newRefresh } = generateTokens({
     userId: payload.userId,
     username: payload.username,
     email: payload.email,
     deviceId: payload.deviceId,
+    role: payload.role || "user", // Include role when refreshing tokens
   });
   session.refreshToken = newRefresh;
   await session.save();
@@ -104,6 +107,52 @@ const checkSession = async (useremail: string) => {
   return userData;
 };
 
+/***********create admin *********/
+const createAdmin = async (email: string, password: string): Promise<any> => {
+  const existingUser = await userRepository.findByEmail(email);
+  if (existingUser) {
+    throw new Apperror("User already exists", 409);
+  }
+  const hashedPassword = hashPassword(password);
+  // Create admin with default phone number (can be updated later)
+  const adminUser = await userRepository.createUser(
+    "Admin User",
+    email,
+    hashedPassword,
+    "9999999999"
+  );
+  // Update role to admin
+  await userRepository.updateUser(adminUser._id.toString(), { role: "admin" });
+  adminUser.role = "admin";
+  return adminUser;
+};
+
+/***********change password *********/
+const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<any> => {
+  const existingUser = await user.findById(userId);
+  if (!existingUser) {
+    throw new Apperror("User not found", 404);
+  }
+
+  // Verify current password
+  const isPasswordValid = comparePassword(currentPassword, existingUser.password);
+  if (!isPasswordValid) {
+    throw new Apperror("Current password is incorrect", 401);
+  }
+
+  // Hash new password
+  const hashedPassword = hashPassword(newPassword);
+
+  // Update password
+  await userRepository.updateUserPassword(userId, hashedPassword);
+
+  return { message: "Password changed successfully" };
+};
+
 export default {
   createUser,
   loginUser,
@@ -111,4 +160,6 @@ export default {
   logoutFromDevice,
   logoutAllDevices,
   checkSession,
+  createAdmin,
+  changePassword,
 };

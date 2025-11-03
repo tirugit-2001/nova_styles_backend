@@ -43,6 +43,18 @@ const getUserSessions = async (userId: string) => {
   return await Session.find({ userId });
 };
 
+const updateUserPassword = async (userId: string, hashedPassword: string) => {
+  return await user.findByIdAndUpdate(
+    userId,
+    { $set: { password: hashedPassword } },
+    { new: true }
+  );
+};
+
+const updateUser = async (userId: string, updateData: any) => {
+  return await user.findByIdAndUpdate(userId, updateData, { new: true });
+};
+
 export default {
   findByEmail,
   createUser,
@@ -51,4 +63,6 @@ export default {
   deleteSession,
   deleteAllSession,
   getUserSessions,
+  updateUserPassword,
+  updateUser,
 };

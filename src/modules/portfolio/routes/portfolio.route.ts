@@ -1,0 +1,20 @@
+import express from "express";
+import portfolioController from "../controllers/portfolio.controller";
+import verifyAdmin from "../../../middlewares/verifyAdmin";
+import verifyUser from "../../../middlewares/verifyUser";
+
+const router = express.Router();
+
+// Public route - Get all portfolios
+router.get("/portfolio", portfolioController.getPortfolios);
+
+// Public route - Get single portfolio
+router.get("/portfolio/:id", portfolioController.getPortfolioById);
+
+// Admin routes - require authentication (verifyUser first, then verifyAdmin)
+router.post("/portfolio", verifyUser, verifyAdmin, portfolioController.createPortfolio);
+router.put("/portfolio/:id", verifyUser, verifyAdmin, portfolioController.updatePortfolio);
+router.delete("/portfolio/:id", verifyUser, verifyAdmin, portfolioController.deletePortfolio);
+
+export default router;
+

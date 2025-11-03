@@ -170,11 +170,114 @@ const checkSession = async (
     next(e);
   }
 };
+
+/******************create admin***************** */
+const createAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).send({ success: false, message: "Email and password are required" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).send({ success: false, message: "Password must be at least 6 characters" });
+    }
+
+    const adminUser = await userService.createAdmin(email, password);
+    return res.status(201).send({
+      success: true,
+      message: "Admin created successfully",
+      admin: {
+        email: adminUser.email,
+        role: adminUser.role,
+      },
+    });
+  } catch (e: any) {
+    next(e);
+  }
+};
+
+/******************change password***************** */
+const changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = (req as any).user?._id || (req as any).user?.userId;
+
+    if (!userId) {
+      throw new Apperror("User not authenticated", 401);
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).send({ success: false, message: "Current password and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).send({ success: false, message: "New password must be at least 6 characters" });
+    }
+
+    await userService.changePassword(userId, currentPassword, newPassword);
+    return res.status(200).send({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (e: any) {
+    next(e);
+  }
+};
+
+/******************logout - clear cookies***************** */
+const logout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    const data = req?.user;
+    if (data?._id && data?.deviceId) {
+      // Delete session from database
+      await userService.logoutFromDevice(data._id, data.deviceId);
+    }
+
+    // Clear cookies
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: config.node_env === "production",
+      sameSite: "strict",
+    });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: config.node_env === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (err: any) {
+    // Even if there's an error, clear cookies
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+    next(err);
+  }
+};
+
 export {
   register,
   login,
   refreshRefreshToken,
   logoutFromDevice,
   logoutAllDevices,
+  logout,
   checkSession,
+  createAdmin,
+  changePassword,
 };
