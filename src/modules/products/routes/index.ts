@@ -4,10 +4,16 @@ import productController from "../controllers/product.controller";
 import verifyAdmin from "../../../middlewares/verifyAdmin";
 import verifyUser from "../../../middlewares/verifyUser";
 const router = express.Router();
-router.post("/", verifyUser, verifyAdmin, productController.createProduct);
+router.post(
+  "/",
+
+  upload.single("image"),
+  productController.createProduct
+);
 router.get("/", productController.getProducts);
 router.get("/:id", productController.getProductById);
 router.put("/:id", verifyUser, verifyAdmin, productController.updateProduct);
 router.delete("/:id", verifyUser, verifyAdmin, productController.deleteProduct);
 export default router;
-upload.single("image");
+//   verifyAdmin,
+//  verifyUser,

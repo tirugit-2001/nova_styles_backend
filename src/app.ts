@@ -16,6 +16,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use("/api/webhook", express.raw({ type: "application/json" }));
 app.use(helmet());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));

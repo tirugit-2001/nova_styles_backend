@@ -5,7 +5,7 @@ import productRepository from "../repository/product.repository";
 const createProduct = async (data: any, file?: Express.Multer.File) => {
   if (file) {
     const uploadResult: any = await uploadImage(file.buffer);
-    data.imageUrl = uploadResult.secure_url;
+    data.image = uploadResult.secure_url;
   }
   return await productRepository.create(data);
 };
@@ -27,8 +27,8 @@ const updateProduct = async (
   const existingProduct: any = await productRepository.findById(id);
   if (!existingProduct) throw new Error("Product not found");
 
-  if (file && existingProduct.imageUrl) {
-    await deleteImage(existingProduct.imageUrl);
+  if (file && existingProduct.image) {
+    await deleteImage(existingProduct.image);
 
     const uploadResult: any = await uploadImage(file.buffer);
     data.imageUrl = uploadResult.secure_url;

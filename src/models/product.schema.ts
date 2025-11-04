@@ -63,7 +63,7 @@ const productSchema = new mongoose.Schema(
         trim: true,
       },
     ],
-    imageUrl: {
+    image: {
       type: String,
       validate: {
         validator: function (v: string) {
