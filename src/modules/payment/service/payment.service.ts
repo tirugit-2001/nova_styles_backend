@@ -7,18 +7,84 @@ import Apperror from "../../../utils/apperror";
 import productRepository from "../../products/repository/product.repository";
 import { emailQueue } from "../../../queues/email.queue";
 import config from "../../../config/config";
+import cartRepository from "../../cart/repository/cart.repository";
+// const createPaymentOrder = async (
+//   userId: string,
+//   items: any[],
+//   addressOrId: string
+// ) => {
+//   console.log(items);
+//   console.log(addressOrId);
+//   const products = await Promise.all(
+//     items.map(async (item) => {
+//       const product = await productRepository.findById(item._id);
+//       if (!product) throw new Apperror("Product not found", 404);
+//       return {
+//         _id: item._id,
+//         price: product.price,
+//         quantity: item.quantity,
+//         area: item.area,
+//         selectedColor: item.selectedColor,
+//         selectedTexture: item.selectedTexture,
+//         image: item.image,
+//         name: product.name,
+//       };
+//     })
+//   );
+//   const amount = products.reduce(
+//     (sum: number, item: any) =>
+//       sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
+//     0
+//   );
+
+//   const options = {
+//     amount: amount * 100,
+//     currency: "INR",
+//     receipt: `order_rcpt_${Date.now()}`,
+//     notes: {
+//       userId: userId,
+//       addressId: addressOrId || "",
+//       items: JSON.stringify(items),
+//       paymentMethod: "razorpay",
+//     },
+//   };
+
+//   const razorpayOrder = await razorpay.orders.create(options);
+
+//   const payment = await paymentRepo.create({
+//     userId,
+//     razorpayOrderId: razorpayOrder.id,
+//     amount,
+//     currency: "INR",
+//     status: "created",
+//   });
+
+//   return { razorpayOrder, payment };
+// };
 const createPaymentOrder = async (
   userId: string,
   items: any[],
   addressOrId: string
 ) => {
-  console.log(items);
-  console.log(addressOrId);
-  const products = await Promise.all(
-    items.map(async (item) => {
-      const product = await productRepository.findById(item._id);
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const products = [];
+
+    for (const item of items) {
+      const product = await productRepository.findById(item._id, session);
       if (!product) throw new Apperror("Product not found", 404);
-      return {
+
+      // ✅ Stock validation
+      if (product.stock < item.quantity) {
+        throw new Apperror(
+          `Only ${product.stock} items left in stock for ${product.name}`,
+          400
+        );
+      }
+
+      products.push({
         _id: item._id,
         price: product.price,
         quantity: item.quantity,
@@ -27,38 +93,52 @@ const createPaymentOrder = async (
         selectedTexture: item.selectedTexture,
         image: item.image,
         name: product.name,
-      };
-    })
-  );
-  const amount = products.reduce(
-    (sum: number, item: any) =>
-      sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
-    0
-  );
+      });
+    }
 
-  const options = {
-    amount: amount * 100,
-    currency: "INR",
-    receipt: `order_rcpt_${Date.now()}`,
-    notes: {
-      userId: userId,
-      addressId: addressOrId || "",
-      items: JSON.stringify(items),
-      paymentMethod: "razorpay",
-    },
-  };
+    // ✅ Calculate total amount
+    const amount = products.reduce(
+      (sum, item) =>
+        sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
+      0
+    );
 
-  const razorpayOrder = await razorpay.orders.create(options);
+    // ✅ Create Razorpay Order
+    const options = {
+      amount: amount * 100,
+      currency: "INR",
+      receipt: `order_rcpt_${Date.now()}`,
+      notes: {
+        userId,
+        addressId: addressOrId || "",
+        items: JSON.stringify(items),
+        paymentMethod: "razorpay",
+      },
+    };
 
-  const payment = await paymentRepo.create({
-    userId,
-    razorpayOrderId: razorpayOrder.id,
-    amount,
-    currency: "INR",
-    status: "created",
-  });
+    const razorpayOrder = await razorpay.orders.create(options);
 
-  return { razorpayOrder, payment };
+    // ✅ Save payment record inside transaction
+    const payment = await paymentRepo.create(
+      {
+        userId,
+        razorpayOrderId: razorpayOrder.id,
+        amount,
+        currency: "INR",
+        status: "created",
+      },
+      session
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return { razorpayOrder, payment };
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
 };
 
 const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
@@ -136,6 +216,7 @@ const verifyPayment = async (data: any) => {
     if (paymentDoc?.amount != order.totalAmount) {
       throw new Apperror("Amount mismatch", 400);
     }
+    await cartRepository.clearCart(userId, session);
     await session.commitTransaction();
     session.endSession();
     if (userEmail) {

@@ -27,16 +27,7 @@ const addToCart = async (
   ) {
     throw new Apperror("Invalid input", 400);
   }
-  console.log(
-    productId,
-    quantity,
-    area,
-    selectedColor,
-    selectedTexture,
-    name,
-    image,
-    userId
-  );
+
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -46,8 +37,7 @@ const addToCart = async (
       throw new Apperror(`Only ${product.stock} items left in stock`, 400);
 
     let cart = await cartRepository.findOne(userId, session);
-    console.log("cararrrrrrr");
-    console.log(JSON.stringify(cart, null, 2));
+
     if (!cart) {
       cart = await cartRepository.createCart(
         {
@@ -67,12 +57,14 @@ const addToCart = async (
         session
       );
     } else {
+      const getProductId = (p: any) =>
+        p._id ? p._id.toString() : p.toString();
       const existingItem = cart.items.find(
-        (item) => item?.product._id?.toString() === productId
+        (item) => getProductId(item.product) === productId
       );
       if (existingItem) {
         cart.items = cart.items.filter(
-          (item) => item.product._id.toString() !== productId
+          (item) => getProductId(item.product) !== productId
         );
         if (quantity > product.stock)
           throw new Apperror(`Only ${product.stock} items left in stock`, 400);
@@ -89,22 +81,108 @@ const addToCart = async (
     }
 
     await cartRepository.save(cart, session);
-
     const totalPrice = await calculateCartTotal(cart);
     const cartItemsIds = cart.items.map((item) => item.product._id.toString());
-    console.log("cartItemsIds");
-    console.log(cartItemsIds);
     const products = await Product.find({ _id: { $in: cartItemsIds } });
-    console.log("proddppdpdpdppdpdpdpd");
-    console.log(products);
     const productMap = new Map<string, any>();
     products.forEach((p) => {
       productMap.set(p._id.toString(), p);
     });
 
-    console.log("product_map");
-    console.log(productMap);
     // Transform cart items into frontend-ready format
+    const formattedItems = cart.items.map((item) => {
+      const productData = productMap.get(item.product._id.toString());
+      if (!productData) throw new Error("Product not found");
+      return {
+        productId: item.product._id.toString(),
+        quantity: item.quantity,
+        product: {
+          _id: productData._id.toString(),
+          name: productData.name,
+          image: productData.image,
+          price: productData.price,
+          area: item.area,
+          selectedColor: item.selectedColor,
+          selectedTexture: item.selectedTexture,
+          quantity: item.quantity,
+        },
+      };
+    });
+    await session.commitTransaction();
+    session.endSession();
+    return { items: formattedItems, totalPrice };
+  } catch (err) {
+    console.log(err);
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
+};
+
+/****** Get Cart ******/
+const getCart = async (userId: string) => {
+  const cart = await cartRepository.findOne(userId);
+  if (!cart) return { items: [], totalPrice: 0 };
+  const cartItemsIds = cart.items.map((item: any) => {
+    return item.product._id.toString();
+  });
+  const products = await Product.find({ _id: { $in: cartItemsIds } });
+  console.log("products");
+  console.log(products);
+  const productMap = new Map<string, any>();
+  products.forEach((p) => productMap.set(p._id.toString(), p));
+  const formattedItems = cart.items.map((item) => {
+    const productData = productMap.get(item.product._id.toString());
+    console.log(productData);
+    if (!productData) throw new Apperror("Product not found", 404);
+    return {
+      productId: item.product._id.toString(),
+      quantity: item.quantity,
+      isAvailable: productData.stock > 0,
+      product: {
+        _id: productData._id.toString(),
+        name: productData.name,
+        image: productData.image,
+        price: productData.price,
+        area: item.area,
+        selectedColor: item.selectedColor,
+        selectedTexture: item.selectedTexture,
+        quantity: item.quantity,
+      },
+    };
+  });
+  const totalPrice = formattedItems.reduce(
+    (sum, i) =>
+      sum + (i.product?.price || 0) * i.quantity * (i.product?.area || 1),
+    0
+  );
+  return { items: formattedItems, totalPrice };
+};
+
+/****** Remove from Cart ******/
+const removeFromCart = async (productId: string, userId: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const cart = await cartRepository.findOne(userId, session);
+    console.log(productId);
+    console.log("cart before deleting");
+    console.log(JSON.stringify(cart, null, 2));
+    if (!cart) throw new Apperror("Cart not found", 404);
+    const getProductId = (p: any) => (p._id ? p._id.toString() : p.toString());
+    cart.items = cart.items.filter(
+      (i) => getProductId(i.product) !== productId
+    );
+    const savedCart = await cartRepository.save(cart, session);
+    console.log("saved Cart");
+    console.log(savedCart);
+    const cartItemsIds = cart.items.map((item) => item.product._id.toString());
+    const products = await Product.find({ _id: { $in: cartItemsIds } });
+    const productMap = new Map<string, any>();
+    products.forEach((p) => {
+      productMap.set(p._id.toString(), p);
+    });
     const formattedItems = cart.items.map((item) => {
       const productData = productMap.get(item.product._id.toString());
       if (!productData) throw new Error("Product not found");
@@ -124,117 +202,13 @@ const addToCart = async (
         },
       };
     });
-    await session.commitTransaction();
-    session.endSession();
-    console.log(cart);
-
-    return { items: formattedItems, totalPrice };
-  } catch (err) {
-    console.log(err);
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
-  }
-};
-
-/****** Get Cart ******/
-const getCart = async (userId: string) => {
-  const cart = await cartRepository.findOne(userId);
-  console.log("cart cart ttttttt");
-  // console.log(cart);
-  console.log(JSON.stringify(cart, null, 2));
-  if (!cart) return { items: [], totalPrice: 0 };
-  const cartItemsIds = cart.items.map((item: any) => {
-    console.log("ititititti");
-    console.log(item);
-    return item.product._id.toString();
-  });
-  console.log("cart items");
-  console.log(cartItemsIds);
-  const products = await Product.find({ _id: { $in: cartItemsIds } });
-  console.log("products ");
-  console.log(products);
-  const productMap = new Map<string, any>();
-  products.forEach((p) => productMap.set(p._id.toString(), p));
-  console.log("product map");
-  console.log(productMap);
-  const formattedItems = cart.items.map((item) => {
-    const productData = productMap.get(item.product._id.toString());
-    if (!productData) throw new Error("Product not found");
-    return {
-      productId: item.product._id.toString(),
-      quantity: item.quantity,
-      product: {
-        _id: productData._id.toString(),
-        name: productData.name,
-        image: productData.image,
-        price: productData.price,
-        area: item.area,
-        selectedColor: item.selectedColor,
-        selectedTexture: item.selectedTexture,
-        quantity: item.quantity,
-      },
-    };
-  });
-
-  // 5️⃣ Calculate total price
-  const totalPrice = formattedItems.reduce(
-    (sum, i) =>
-      sum + (i.product?.price || 0) * i.quantity * (i.product?.area || 1),
-    0
-  );
-
-  // 6️⃣ Return in the same format as useCartStore
-  return { items: formattedItems, totalPrice };
-};
-
-/****** Remove from Cart ******/
-const removeFromCart = async (productId: string, userId: string) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const cart = await cartRepository.findOne(userId, session);
-    if (!cart) throw new Apperror("Cart not found", 404);
-
-    cart.items = cart.items.filter((i) => i.product.toString() !== productId);
-
-    await cartRepository.save(cart, session);
-
-    const cartItemsIds = cart.items.map((item) => item.product);
-    const products = await Product.find({ _id: { $in: cartItemsIds } });
-    const productMap = new Map<string, any>();
-    products.forEach((p) => productMap.set(p._id.toString(), p));
-
-    const formattedItems = cart.items.map((item) => {
-      const productData = productMap.get(item.product.toString());
-      if (!productData) throw new Apperror("Product not found", 404);
-
-      return {
-        productId: item.product.toString(),
-        quantity: item.quantity,
-        product: {
-          _id: productData._id.toString(),
-          name: productData.name,
-          image: productData.image,
-          price: productData.price,
-          area: item.area,
-          selectedColor: item.selectedColor,
-          selectedTexture: item.selectedTexture,
-          quantity: item.quantity,
-        },
-      };
-    });
-
     const totalPrice = formattedItems.reduce(
       (sum, i) =>
         sum + (i.product?.price || 0) * i.quantity * (i.product?.area || 1),
       0
     );
-
     await session.commitTransaction();
     session.endSession();
-
     return { items: formattedItems, totalPrice };
   } catch (err) {
     await session.abortTransaction();
@@ -246,12 +220,8 @@ const removeFromCart = async (productId: string, userId: string) => {
 /****** Merge Guest Cart ******/
 const mergeCart = async (guestCart: any, userId: string) => {
   if (!guestCart || guestCart.length === 0) return null;
-  console.log("userId");
-  console.log(userId);
-  console.log(guestCart);
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
     let cart = await cartRepository.findOne(userId, session);
     if (!cart) {
@@ -260,17 +230,16 @@ const mergeCart = async (guestCart: any, userId: string) => {
         session
       );
     }
-    console.log("ok");
+    const getProductId = (p: any) => (p._id ? p._id.toString() : p.toString());
     for (const guestItem of guestCart) {
       const product = await productRepository.findById(guestItem.productId);
       if (!product) continue;
-
       const existingItem = cart.items.find(
-        (item) => item?.product?.toString() === guestItem.productId
+        (item) => getProductId(item?.product) === guestItem?.productId
       );
       if (existingItem) {
         cart.items = cart.items.filter(
-          (item) => item.product.toString() !== guestItem.productId
+          (item) => getProductId(item.product) !== guestItem.productId
         );
         if (guestItem.quantity > product.stock)
           throw new Apperror(`Only ${product.stock} items left in stock`, 400);
@@ -278,17 +247,17 @@ const mergeCart = async (guestCart: any, userId: string) => {
       cart.items.push({
         product: guestItem.productId,
         quantity: guestItem.quantity,
-        area: guestItem.area,
-        selectedColor: guestItem.selectedColor,
-        selectedTexture: guestItem.selectedTexture,
-        name: guestItem.name,
-        image: guestItem.image,
+        area: guestItem.product.area,
+        selectedColor: guestItem.product.selectedColor,
+        selectedTexture: guestItem.product.selectedTexture,
+        name: guestItem.product.name,
+        image: guestItem.product.image,
       });
     }
-    await cartRepository.save(cart, session);
 
+    await cartRepository.save(cart, session);
     const totalPrice = await calculateCartTotal(cart);
-    const cartItemsIds = cart.items.map((item) => item.product);
+    const cartItemsIds = cart.items.map((item) => item.product._id.toString());
     const products = await Product.find({ _id: { $in: cartItemsIds } });
     const productMap = new Map<string, any>();
     products.forEach((p) => {
@@ -297,11 +266,10 @@ const mergeCart = async (guestCart: any, userId: string) => {
 
     // Transform cart items into frontend-ready format
     const formattedItems = cart.items.map((item) => {
-      const productData = productMap.get(item.product.toString());
+      const productData = productMap.get(item.product._id.toString());
       if (!productData) throw new Error("Product not found");
-
       return {
-        productId: item.product.toString(),
+        productId: item.product._id.toString(),
         quantity: item.quantity,
         product: {
           _id: productData._id.toString(),
@@ -317,8 +285,6 @@ const mergeCart = async (guestCart: any, userId: string) => {
     });
     await session.commitTransaction();
     session.endSession();
-    console.log(cart);
-
     return { items: formattedItems, totalPrice };
   } catch (err) {
     console.log(err);

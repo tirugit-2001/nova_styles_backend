@@ -5,9 +5,12 @@ const orderItemSchema = new Schema<IOrderItem>(
   {
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
     name: String,
-    imageUrl: String,
+    image: String,
     price: Number,
     quantity: Number,
+    area: Number,
+    selectedColor: String,
+    selectedTexture: String,
   },
   { _id: false }
 );

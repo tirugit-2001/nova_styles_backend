@@ -33,5 +33,14 @@ const save = async (cart: any, session?: mongoose.ClientSession) => {
 
   return savedCart;
 };
+const clearCart = async (userId: string, session?: mongoose.ClientSession) => {
+  const query = Cart.findOneAndUpdate(
+    { user: userId },
+    { $set: { items: [] } },
+    { new: true }
+  );
+  if (session) query.session(session);
+  return await query;
+};
 
-export default { findOne, createCart, save };
+export default { findOne, createCart, save, clearCart };

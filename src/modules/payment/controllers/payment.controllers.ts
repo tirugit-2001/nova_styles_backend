@@ -56,6 +56,8 @@ const verifyPayment = async (
       userId,
       userEmail,
     });
+    console.log("result");
+    console.log(result);
     res.status(200).send({
       message: "Payment verified & order created",
       ...result,

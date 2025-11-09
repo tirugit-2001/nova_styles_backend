@@ -1,6 +1,10 @@
+import mongoose from "mongoose";
 import Payment from "../../../models/payment.schema";
 
-const create = async (data: any) => {
+const create = async (data: any, session?: mongoose.ClientSession) => {
+  if (session) {
+    return await Payment.create([data], { session }); // notice array
+  }
   return await Payment.create(data);
 };
 

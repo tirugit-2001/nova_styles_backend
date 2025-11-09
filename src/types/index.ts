@@ -74,9 +74,12 @@ interface IPayment extends Document {
 interface IOrderItem {
   productId: mongoose.Types.ObjectId;
   name: string;
-  imageUrl: string;
+  image: string;
   price: number;
   quantity: number;
+  area: number;
+  selectedColor: string;
+  selectedTexture: string;
 }
 
 interface IOrder extends Document {

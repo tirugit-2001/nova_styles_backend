@@ -20,7 +20,6 @@ const createOrder = async (
 
   console.log("dohohohohoho");
   if (typeof addressOrId.addressId === "string") {
-    // Existing address
     if (!addressOrId.addressId) {
       throw new Apperror("address id not found ", 404);
     }
@@ -68,7 +67,7 @@ const createOrder = async (
       return {
         productId: product._id,
         name: product.name,
-        imageUrl: product.imageUrl,
+        image: product.image,
         price: product.price,
         quantity: item.quantity,
         selectedTexture: item.selectedTexture,

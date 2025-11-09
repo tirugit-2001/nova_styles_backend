@@ -41,8 +41,7 @@ const getCart = async (req: Request, res: Response, next: NextFunction) => {
 
     const userId = req.user._id;
     const cart = await cartService.getCart(userId);
-    console.log("car t card ");
-    console.log(cart);
+
     res.status(200).send({ success: true, cart });
   } catch (e) {
     console.log(e);

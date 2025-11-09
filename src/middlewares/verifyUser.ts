@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import { verifyAccessToken } from "../utils/utiltoken";
 import Apperror from "../utils/apperror";
 import userRepository from "../modules/auth/repository/user.repository";
-
 const verifyUser = async (
   req: Request,
   res: Response,
