@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import contentService from "../service/content.service";
+import { validate } from "../../../utils/validateschema";
+import { interiorFormSchema } from "../../../utils/schemas/interiorFormSchema";
+import { constructionFormSchema } from "../../../utils/schemas/constructionFormSchema";
 
 const createContent = async (
   req: Request,
@@ -72,7 +75,54 @@ const deleteContent = async (
   }
 };
 
-const postContactForm = () => {};
+const postContactForm = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Validate request body
+    const validatedData = validate(interiorFormSchema, req.body);
+
+    // Send email notification to admin
+    const job = await contentService.sendInteriorDesignNotification(
+      validatedData
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Form submitted successfully. Our team will contact you shortly.",
+      jobId: job?.id,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const postConstructionForm = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Validate request body
+    const validatedData = validate(constructionFormSchema, req.body);
+
+    // Send email notification to admin
+    const job = await contentService.sendConstructionNotification(
+      validatedData
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Form submitted successfully. Our team will contact you shortly.",
+      jobId: job?.id,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   createContent,
   getContentBySection,
@@ -80,4 +130,5 @@ export default {
   deleteContent,
   getContentById,
   postContactForm,
+  postConstructionForm,
 };

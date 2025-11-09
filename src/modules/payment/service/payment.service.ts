@@ -144,6 +144,11 @@ const createPaymentOrder = async (
 const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
   console.log("🔵 Attempting to add email job for:", userEmail);
 
+  if (!emailQueue) {
+    console.warn("⚠️  Email queue is not available (Redis not running). Email will not be sent.");
+    return null;
+  }
+
   try {
     const job = await emailQueue.add("sendPaymentEmail", {
       to: userEmail,
