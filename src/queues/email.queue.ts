@@ -5,6 +5,9 @@ const connection = {
   host: config.redis_host,
   port: Number(config.redis_port),
   password: config.redis_password,
+  tls: {
+    rejectUnauthorized: false, // allow secure connection
+  },
 };
 
 export const emailQueue = new Queue("emailQueue", {
