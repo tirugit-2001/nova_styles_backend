@@ -6,9 +6,9 @@ const connection = {
   host: config.redis_host,
   port: Number(config.redis_port),
   password: config.redis_password,
-  tls: {
-    rejectUnauthorized: false, // allow secure connection
-  },
+  //   tls: {
+  //     rejectUnauthorized: false, // allow secure connection
+  //   },
 };
 
 const transporter = nodemailer.createTransport({
