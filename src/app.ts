@@ -9,7 +9,7 @@ import cookieParser from "cookie-parser";
 const app = express();
 app.use(
   cors({
-    origin: "*",
+    origin: ["https://www.novastylesinterior.com","https://www.store.novastylesinterior.com","https://admin.novastylesinterior.com"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
