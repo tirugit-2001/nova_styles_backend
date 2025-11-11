@@ -16,24 +16,23 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS blocked"));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
-
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
 
+// Allow preflight
+app.options("*", cors());
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/webhook", express.raw({ type: "application/json" }));
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 app.use("/health", (req: Request, res: Response) => {
   res.status(200).send("Health Check Ok");
