@@ -45,15 +45,19 @@ const login = async (
     return res
       .cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        domain: ".novastylesinterior.com",
+        path: "/",
       })
       .cookie("accessToken", result.accessToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
         maxAge: 15 * 60 * 1000, // 15 minutes
+        path: "/",
+        domain: ".novastylesinterior.com",
       })
       .status(200)
       .send({ message: "User logged successfully", result });
@@ -83,15 +87,19 @@ const refreshRefreshToken = async (
     return res
       .cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: ".novastylesinterior.com",
+        path: "/",
       })
       .cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
         maxAge: 15 * 60 * 1000,
+        domain: ".novastylesinterior.com",
+        path: "/",
       })
       .status(200)
       .send({ message: "Refresh token fetched successfully" });
