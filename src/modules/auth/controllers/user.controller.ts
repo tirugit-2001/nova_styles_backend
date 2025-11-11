@@ -46,13 +46,13 @@ const login = async (
       .cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
         secure: config.node_env === "production",
-        sameSite: "strict",
+        sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       })
       .cookie("accessToken", result.accessToken, {
         httpOnly: true,
         secure: config.node_env === "production",
-        sameSite: "strict",
+        sameSite: "none",
         maxAge: 15 * 60 * 1000, // 15 minutes
       })
       .status(200)
