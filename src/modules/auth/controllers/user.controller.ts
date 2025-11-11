@@ -45,13 +45,13 @@ const login = async (
     return res
       .cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
-        secure: config.node_env === "production",
+        secure: false,
         sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       })
       .cookie("accessToken", result.accessToken, {
         httpOnly: true,
-        secure: config.node_env === "production",
+        secure: false,
         sameSite: "none",
         maxAge: 15 * 60 * 1000, // 15 minutes
       })
@@ -83,13 +83,13 @@ const refreshRefreshToken = async (
     return res
       .cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: config.node_env === "production",
+        secure: false,
         sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       })
       .cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: config.node_env === "production",
+        secure: false,
         sameSite: "none",
         maxAge: 15 * 60 * 1000,
       })
