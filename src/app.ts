@@ -13,7 +13,6 @@ const allowedOrigins = [
   "https://admin.novastylesinterior.com",
   "https://novastylesinterior.com",
 ];
-app.use(cookieParser());
 app.use(
   cors({
     origin: allowedOrigins,
@@ -21,6 +20,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
+app.use(cookieParser());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
