@@ -88,7 +88,7 @@ const refreshRefreshToken = async (
       .cookie("refreshToken", refreshToken, {
         httpOnly: true,
         // secure: true,
-        // sameSite: "none",
+        sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000,
         // domain: ".novastylesinterior.com",
         // path: "/",
@@ -96,7 +96,7 @@ const refreshRefreshToken = async (
       .cookie("accessToken", accessToken, {
         httpOnly: true,
         // secure: true,
-        // sameSite: "none",
+        sameSite: "none",
         maxAge: 15 * 60 * 1000,
         // domain: ".novastylesinterior.com",
         // path: "/",
