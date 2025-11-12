@@ -25,11 +25,11 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/webhook", express.raw({ type: "application/json" }));
-app.use(
-  helmet({
-    crossOriginResourcePolicy: false,
-  })
-);
+// app.use(
+//   helmet({
+//     crossOriginResourcePolicy: false,
+//   })
+// );
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 app.use("/health", (req: Request, res: Response) => {
   res.status(200).send("Health Check Ok");
