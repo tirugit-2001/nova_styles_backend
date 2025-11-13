@@ -15,6 +15,8 @@ const allowedOrigins = [
   "https://nova-styles-admin.vercel.app",
   "https://nova-styles-frontend.vercel.app",
   "https://www.novastylesinterior.com", // Production frontend UI
+  "https://store.novastylesinterior.com",
+  "https://admin.novastylesinterior.com",
 ];
 
 // CORS configuration - MUST be before other middleware
@@ -23,12 +25,12 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
       if (!origin) return callback(null, true);
-      
+
       // Check if the origin is in the allowed list
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      
+
       // Log rejected origins for debugging
       console.warn(`CORS blocked origin: ${origin}`);
       return callback(new Error("Not allowed by CORS"));
@@ -36,16 +38,16 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: [
-      "Content-Type", 
-      "Authorization", 
+      "Content-Type",
+      "Authorization",
       "X-Requested-With",
       "Accept",
-      "Origin"
+      "Origin",
     ],
     exposedHeaders: ["Set-Cookie"],
     maxAge: 86400, // 24 hours
     preflightContinue: false,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
   })
 );
 
@@ -82,9 +84,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
 // Health check endpoint
 app.use("/health", (req: Request, res: Response) => {
-  res.status(200).json({ 
-    status: "ok", 
-    timestamp: new Date().toISOString() 
+  res.status(200).json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
   });
 });
 
