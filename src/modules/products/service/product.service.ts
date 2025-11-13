@@ -1,13 +1,21 @@
 import { deleteImage, uploadImage } from "../../../config/cloudinary";
+import cloudinary from "../../../utils/cloudinary";
 import productRepository from "../repository/product.repository";
 
 /******** create product*******/
 const createProduct = async (data: any, file?: Express.Multer.File) => {
-  if (file) {
-    const uploadResult: any = await uploadImage(file.buffer);
-    data.image = uploadResult.secure_url;
+  try{
+    if(data.imageUrl && data.imageUrl.startsWith('data:image')){
+      const uploadResult = await cloudinary.uploader.upload(data.imageUrl,{
+        folder:'product-sections',
+        resource_type:'image'
+      });
+      data.image = uploadResult.secure_url
+    }
+    return await productRepository.create(data);
+  }catch(error:any){
+    throw new Error(`Failed to create product: ${error.message}`)
   }
-  return await productRepository.create(data);
 };
 /******** get all products*******/
 const getProducts = async () => {

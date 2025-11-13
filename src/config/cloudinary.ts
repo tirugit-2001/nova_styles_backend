@@ -23,6 +23,30 @@ export const uploadImage = (
   });
 };
 
+export const uploadBase64Image = async (
+  base64String: string,
+  folder = "portfolio"
+): Promise<any> => {
+  try {
+    // Remove data URL prefix if present (data:image/png;base64,)
+    const base64Data = base64String.includes(",")
+      ? base64String.split(",")[1]
+      : base64String;
+
+    const result = await cloudinary.uploader.upload(
+      `data:image/png;base64,${base64Data}`,
+      {
+        folder,
+        resource_type: "image",
+      }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error uploading base64 image:", error);
+    throw error;
+  }
+};
+
 export const deleteImage = async (imageUrl: string) => {
   if (!imageUrl) return;
 

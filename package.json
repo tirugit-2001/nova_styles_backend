@@ -38,6 +38,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "worker": "node dist/worker/email.worker.js",
-    "start:all": "concurrently \"npm start\" \"npm run worker\""
+    "start:all": "concurrently \"npm start\" \"npm run worker\"",
+    "set-admin": "ts-node src/scripts/setUserAsAdmin.ts"
   }
 }

@@ -12,6 +12,10 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
+        url: "https://nova-styles-backend.onrender.com/api/v1",
+        description: "Production server",
+      },
+      {
         url: "http://localhost:8500/api/v1",
         description: "Development server",
       },
@@ -41,16 +45,30 @@ const options: swaggerJsdoc.Options = {
     ],
   },
   apis: [
-    path.join(__dirname, "../modules/auth/routes/*.js"),
-    path.join(__dirname, "../modules/cart/routes/*.js"),
-    path.join(__dirname, "../modules/products/routes/*.js"),
+    path.join(__dirname, "../modules/auth/routes/*.ts"),
+    path.join(__dirname, "../modules/cart/routes/*.ts"),
+    path.join(__dirname, "../modules/products/routes/*.ts"),
+    path.join(__dirname, "../modules/orders/routes/*.ts"),
+    path.join(__dirname, "../modules/payment/routes/*.ts"),
+    path.join(__dirname, "../modules/portfolio/routes/*.ts"),
+    path.join(__dirname, "../modules/content/route.ts/*.ts"),
+    path.join(__dirname, "../modules/users/routes/*.ts"),
+    path.join(__dirname, "../modules/webFront/routes/*.ts"),
+    path.join(__dirname, "../modules/admin/routes/*.ts"),
   ],
 };
 
 console.log("Swagger API paths:", [
-  path.join(__dirname, "../modules/auth/routes/*.js"),
-  path.join(__dirname, "../modules/cart/routes/*.js"),
-  path.join(__dirname, "../modules/products/routes/*.js"),
+  path.join(__dirname, "../modules/auth/routes/*.ts"),
+  path.join(__dirname, "../modules/cart/routes/*.ts"),
+  path.join(__dirname, "../modules/products/routes/*.ts"),
+  path.join(__dirname, "../modules/orders/routes/*.ts"),
+  path.join(__dirname, "../modules/payment/routes/*.ts"),
+  path.join(__dirname, "../modules/portfolio/routes/*.ts"),
+  path.join(__dirname, "../modules/content/route.ts/*.ts"),
+  path.join(__dirname, "../modules/users/routes/*.ts"),
+  path.join(__dirname, "../modules/webFront/routes/*.ts"),
+  path.join(__dirname, "../modules/admin/routes/*.ts"),
 ]);
 
 const specs = swaggerJsdoc(options);

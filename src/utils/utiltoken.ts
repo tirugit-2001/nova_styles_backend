@@ -8,6 +8,7 @@ const generateTokens = (payload: {
   email: string;
   username: string;
   deviceId: string;
+  role?: string;
 }) => {
   const accessToken = jwt.sign(
     {
@@ -15,12 +16,19 @@ const generateTokens = (payload: {
       username: payload.username,
       email: payload.email,
       deviceId: payload.deviceId,
+      role: payload.role || "user", // Include role in token, default to "user"
     },
     config.jwtAccessTokenSecret,
     { expiresIn: "15m" }
   );
   const refreshToken = jwt.sign(
-    payload,
+    {
+      userId: payload.userId,
+      email: payload.email,
+      username: payload.username,
+      deviceId: payload.deviceId,
+      role: payload.role || "user", // Include role in refresh token too
+    },
     config.jwtRefreshTokenSecret as string,
     {
       expiresIn: "7d",

@@ -1,3 +1,4 @@
+import { required } from "joi";
 import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
@@ -65,12 +66,13 @@ const productSchema = new mongoose.Schema(
     ],
     image: {
       type: String,
-      validate: {
-        validator: function (v: string) {
-          return /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)$/.test(v);
-        },
-        message: "Invalid image URL format",
-      },
+      // required: true,
+      // validate: {
+      //   validator: function (v: string) {
+      //     return /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)$/.test(v);
+      //   },
+      //   message: "Invalid image URL format",
+      // },
     },
     isActive: {
       type: Boolean,
