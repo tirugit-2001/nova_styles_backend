@@ -8,8 +8,10 @@ const createPortfolio = async (data: any) => {
     try {
       const uploadResult = await uploadBase64Image(data.image, "portfolio");
       data.image = uploadResult.secure_url;
-    } catch (error) {
-      throw new Apperror("Failed to upload image to Cloudinary", 500);
+    } catch (error: any) {
+      console.error("Cloudinary upload error:", error);
+      const errorMessage = error?.message || "Failed to upload image to Cloudinary";
+      throw new Apperror(`Failed to upload image: ${errorMessage}`, 500);
     }
   }
 
@@ -17,7 +19,16 @@ const createPortfolio = async (data: any) => {
     throw new Apperror("Image is required", 400);
   }
 
-  return await portfolioRepository.createPortfolio(data);
+  try {
+    return await portfolioRepository.createPortfolio(data);
+  } catch (error: any) {
+    // Handle Mongoose validation errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err: any) => err.message).join(", ");
+      throw new Apperror(`Validation error: ${messages}`, 400);
+    }
+    throw error;
+  }
 };
 
 const getAllPortfolios = async () => {

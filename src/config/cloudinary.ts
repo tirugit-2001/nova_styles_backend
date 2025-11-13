@@ -28,13 +28,26 @@ export const uploadBase64Image = async (
   folder = "portfolio"
 ): Promise<any> => {
   try {
-    // Remove data URL prefix if present (data:image/png;base64,)
-    const base64Data = base64String.includes(",")
-      ? base64String.split(",")[1]
-      : base64String;
+    // Check if it's a data URL with prefix (data:image/jpeg;base64, or data:image/png;base64,)
+    let mimeType = "image/png"; // default
+    let base64Data = base64String;
+
+    if (base64String.includes(",")) {
+      const parts = base64String.split(",");
+      const dataUrlPrefix = parts[0]; // e.g., "data:image/jpeg;base64"
+      base64Data = parts[1];
+
+      // Extract mime type from prefix
+      if (dataUrlPrefix.includes("image/")) {
+        const mimeMatch = dataUrlPrefix.match(/image\/([^;]+)/);
+        if (mimeMatch) {
+          mimeType = `image/${mimeMatch[1]}`;
+        }
+      }
+    }
 
     const result = await cloudinary.uploader.upload(
-      `data:image/png;base64,${base64Data}`,
+      `data:${mimeType};base64,${base64Data}`,
       {
         folder,
         resource_type: "image",
