@@ -52,9 +52,18 @@ app.use(
 // Cookie parser - before routes
 app.use(cookieParser());
 
-// Body parsers
-app.use(express.json());
-// app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// Body parsers - increase size limits to handle base64 images
+app.use(
+  express.json({
+    limit: "20mb",
+  })
+);
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "20mb",
+  })
+);
 
 // Webhook endpoint with raw body parser (BEFORE express.json())
 // Note: This should be moved BEFORE express.json() if you need raw body
