@@ -2,21 +2,25 @@ import { Request, Response, NextFunction } from "express";
 import paymentService from "../service/payment.service";
 import Apperror from "../../../utils/apperror";
 
+/********create payment order**********/
 const createPaymentOrder = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { items, address } = req.body;
+    const { items, address, cartFlag } = req.body;
     const userId = req.user?._id;
-    if (!userId) {
-      throw new Apperror("userId not found", 404);
+    const userEmail = req.user?.email;
+    if (!userId || !userEmail) {
+      throw new Apperror("userId or userEmail not found", 404);
     }
     const { razorpayOrder, payment } = await paymentService.createPaymentOrder(
       userId,
       items,
-      address
+      address,
+      cartFlag,
+      userEmail
     );
     res.status(200).send({
       message: "Payment order created",
@@ -28,6 +32,7 @@ const createPaymentOrder = async (
   }
 };
 
+/********verify payment**********/
 const verifyPayment = async (
   req: Request,
   res: Response,
@@ -42,6 +47,7 @@ const verifyPayment = async (
       address,
       totalAmount,
       paymentMethod,
+      cartFlag,
     } = req.body;
     const userId = req.user?._id;
     const userEmail = req.user?.email;
@@ -55,6 +61,7 @@ const verifyPayment = async (
       paymentMethod,
       userId,
       userEmail,
+      cartFlag,
     });
     console.log("result");
     console.log(result);

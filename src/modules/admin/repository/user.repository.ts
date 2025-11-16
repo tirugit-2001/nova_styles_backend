@@ -5,6 +5,10 @@ const findByEmail = async (email: string): Promise<any> => {
   const existingUser = await user.findOne({ email });
   return existingUser;
 };
+const findById = async (id: string): Promise<any> => {
+  const existingUser = await user.findById(id);
+  return existingUser;
+};
 const createUser = async (
   username: string,
   email: string,
@@ -53,4 +57,5 @@ export default {
   findSession,
   deleteSession,
   deleteAllSession,
+  findById,
 };
