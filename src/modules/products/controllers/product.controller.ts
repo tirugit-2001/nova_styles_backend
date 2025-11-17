@@ -17,7 +17,7 @@ const createProduct = async (
     const product = await productService.createProduct(validatedData, req.file);
     res.status(201).json({ message: "Product created", product });
   } catch (err) {
-    console.log(err)
+    console.log(err);
     next(err);
   }
 };
@@ -25,14 +25,22 @@ const createProduct = async (
 const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
     console.log("inside get products controller");
-    const products = await productService.getProducts();
+
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 12;
+
+    const { products, total } = await productService.getProducts(page, limit);
+
     res.status(200).send({
-      message: "Products fetched successfully",
       success: true,
+      message: "Products fetched successfully",
       products,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
     });
   } catch (err) {
-    console.log(err)
+    console.log(err);
     next(err);
   }
 };

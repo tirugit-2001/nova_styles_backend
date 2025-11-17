@@ -5,66 +5,15 @@ import orderService from "../../orders/service/order.service";
 import mongoose from "mongoose";
 import Apperror from "../../../utils/apperror";
 import productRepository from "../../products/repository/product.repository";
-import { emailQueue } from "../../../queues/email.queue";
-import config from "../../../config/config";
 import cartRepository from "../../cart/repository/cart.repository";
-// const createPaymentOrder = async (
-//   userId: string,
-//   items: any[],
-//   addressOrId: string
-// ) => {
-//   console.log(items);
-//   console.log(addressOrId);
-//   const products = await Promise.all(
-//     items.map(async (item) => {
-//       const product = await productRepository.findById(item._id);
-//       if (!product) throw new Apperror("Product not found", 404);
-//       return {
-//         _id: item._id,
-//         price: product.price,
-//         quantity: item.quantity,
-//         area: item.area,
-//         selectedColor: item.selectedColor,
-//         selectedTexture: item.selectedTexture,
-//         image: item.image,
-//         name: product.name,
-//       };
-//     })
-//   );
-//   const amount = products.reduce(
-//     (sum: number, item: any) =>
-//       sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
-//     0
-//   );
-
-//   const options = {
-//     amount: amount * 100,
-//     currency: "INR",
-//     receipt: `order_rcpt_${Date.now()}`,
-//     notes: {
-//       userId: userId,
-//       addressId: addressOrId || "",
-//       items: JSON.stringify(items),
-//       paymentMethod: "razorpay",
-//     },
-//   };
-
-//   const razorpayOrder = await razorpay.orders.create(options);
-
-//   const payment = await paymentRepo.create({
-//     userId,
-//     razorpayOrderId: razorpayOrder.id,
-//     amount,
-//     currency: "INR",
-//     status: "created",
-//   });
-
-//   return { razorpayOrder, payment };
-// };
+import { sendPaymentSuccessEmail } from "../../../helpers/sendemail";
+/********create payment order**********/
 const createPaymentOrder = async (
   userId: string,
   items: any[],
-  addressOrId: string
+  addressOrId: string,
+  cartFlag: boolean,
+  userEmail: string
 ) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -76,7 +25,6 @@ const createPaymentOrder = async (
       const product = await productRepository.findById(item._id, session);
       if (!product) throw new Apperror("Product not found", 404);
 
-      // ✅ Stock validation
       if (product.stock < item.quantity) {
         throw new Apperror(
           `Only ${product.stock} items left in stock for ${product.name}`,
@@ -96,29 +44,28 @@ const createPaymentOrder = async (
       });
     }
 
-    // ✅ Calculate total amount
     const amount = products.reduce(
       (sum, item) =>
         sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
       0
     );
 
-    // ✅ Create Razorpay Order
     const options = {
       amount: amount * 100,
       currency: "INR",
       receipt: `order_rcpt_${Date.now()}`,
       notes: {
+        userEmail,
         userId,
         addressId: addressOrId || "",
         items: JSON.stringify(items),
         paymentMethod: "razorpay",
+        cartFlag: cartFlag ? "true" : "false",
       },
     };
 
     const razorpayOrder = await razorpay.orders.create(options);
 
-    // ✅ Save payment record inside transaction
     const payment = await paymentRepo.create(
       {
         userId,
@@ -141,35 +88,38 @@ const createPaymentOrder = async (
   }
 };
 
-const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
-  console.log("🔵 Attempting to add email job for:", userEmail);
+// const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
+//   console.log("Attempting to add email job for:", userEmail);
 
-  if (!emailQueue) {
-    console.warn("⚠️  Email queue is not available (Redis not running). Email will not be sent.");
-    return null;
-  }
+//   if (!emailQueue) {
+//     console.warn(
+//       "Email queue is not available (Redis not running). Email will not be sent."
+//     );
+//     return null;
+//   }
 
-  try {
-    const job = await emailQueue.add("sendPaymentEmail", {
-      to: userEmail,
-      subject: "Payment Successful! Order Confirmed",
-      html: `
-        <h1>Thank you for your order!</h1>
-        <p>Your payment has been successfully processed.</p>
-        <p><strong>Order ID:</strong> ${order._id}</p>
-        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
-        <p>We will start processing your order soon.</p>
-      `,
-    });
+//   try {
+//     const job = await emailQueue.add("sendPaymentEmail", {
+//       to: userEmail,
+//       subject: "Payment Successful! Order Confirmed",
+//       html: `
+//         <h1>Thank you for your order!</h1>
+//         <p>Your payment has been successfully processed.</p>
+//         <p><strong>Order ID:</strong> ${order._id}</p>
+//         <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+//         <p>We will start processing your order soon.</p>
+//       `,
+//     });
 
-    console.log("✅ Email job added successfully:", job.id);
-    return job;
-  } catch (error) {
-    console.error("❌ Error adding email job:", error);
-    throw error;
-  }
-};
+//     console.log("Email job added successfully:", job.id);
+//     return job;
+//   } catch (error) {
+//     console.error("Error adding email job:", error);
+//     throw error;
+//   }
+// };
 
+/********verify payment**********/
 const verifyPayment = async (data: any) => {
   const {
     razorpay_order_id,
@@ -180,8 +130,10 @@ const verifyPayment = async (data: any) => {
     items,
     userEmail,
     paymentMethod,
+    cartFlag,
   } = data;
   console.log(userEmail);
+  console.log("cart flag", cartFlag);
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -199,7 +151,6 @@ const verifyPayment = async (data: any) => {
       throw new Apperror("Payment verification failed", 400);
     }
 
-    // update payment to success
     const paymentDoc = await paymentRepo.updateStatus(razorpay_order_id, {
       razorpayPaymentId: razorpay_payment_id,
       razorpaySignature: razorpay_signature,
@@ -208,7 +159,7 @@ const verifyPayment = async (data: any) => {
     });
 
     console.log(paymentDoc);
-    // create order safely
+
     const order = await orderService.createOrder(
       userId,
       items,
@@ -221,7 +172,8 @@ const verifyPayment = async (data: any) => {
     if (paymentDoc?.amount != order.totalAmount) {
       throw new Apperror("Amount mismatch", 400);
     }
-    await cartRepository.clearCart(userId, session);
+    if (cartFlag) await cartRepository.clearCart(userId, session);
+
     await session.commitTransaction();
     session.endSession();
     if (userEmail) {
