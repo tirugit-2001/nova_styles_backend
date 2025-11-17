@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
 
+const SectionSchema = new mongoose.Schema({
+  name: { type: String, required: [true, "Section name is required"], trim: true },
+  images: { type: [String], default: [] },
+});
+
 const portfolioSchema = new mongoose.Schema(
   {
     title: {
@@ -17,13 +22,15 @@ const portfolioSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Category is required"],
-      enum: ["Living Room", "Bedroom", "Kitchen", "Bathroom", "Office"],
       trim: true,
     },
     image: {
       type: String,
-      required: [true, "Image is required"],
     },
+    showOnMainHome: { type: Boolean, default: false },
+    showOnInteriorHome: { type: Boolean, default: false },
+    showOnConstruction: { type: Boolean, default: false },
+    sections: { type: [SectionSchema], default: [] },
   },
   { timestamps: true }
 );
@@ -31,3 +38,4 @@ const portfolioSchema = new mongoose.Schema(
 const Portfolio = mongoose.model("Portfolio", portfolioSchema);
 export default Portfolio;
 
+ 

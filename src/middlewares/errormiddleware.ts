@@ -1,11 +1,21 @@
 import { NextFunction, Request, Response } from "express";
 import Apperror from "../utils/apperror";
 export const errorHandler = (
-  err: Apperror | Error,
+  err: any,
   req: Request,
   res: Response,
   next: NextFunction
 ): any => {
+  // Log the error for debugging
+  console.error("Error occurred:", {
+    message: err.message,
+    stack: err.stack,
+    name: err.name,
+    statusCode: err.statusCode,
+    path: req.path,
+    method: req.method,
+  });
+
   if (err instanceof Apperror) {
     return res.status(err.statusCode).json({
       success: false,
@@ -13,17 +23,46 @@ export const errorHandler = (
     });
   }
 
-  // Log the actual error for debugging
-  console.error("Unhandled error:", err);
-  console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
+  // Handle Mongoose validation errors
+  if (err.name === "ValidationError") {
+    const messages = Object.values(err.errors).map((e: any) => e.message);
+    return res.status(400).json({
+      success: false,
+      message: "Validation Error",
+      errors: messages,
+    });
+  }
 
-  // default for unhandled errors
-  return res.status(500).json({
+  // Handle Mongoose duplicate key errors
+  if (err.code === 11000) {
+    return res.status(400).json({
+      success: false,
+      message: "Duplicate entry. This record already exists.",
+    });
+  }
+
+  // Handle Mongoose cast errors (invalid ID)
+  if (err.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid ID format",
+    });
+  }
+
+  // Handle payload too large errors (413)
+  if (err.name === "PayloadTooLargeError" || err.statusCode === 413) {
+    return res.status(413).json({
+      success: false,
+      message: "Request payload too large. Please reduce the image size or compress the image before uploading.",
+    });
+  }
+
+  // default for unhandled errors - include error message in development
+  const isDevelopment = process.env.NODE_ENV === "development";
+  return res.status(err.statusCode || 500).json({
     success: false,
     message: "Something went wrong",
-    ...(process.env.NODE_ENV === "development" && {
-      error: err instanceof Error ? err.message : String(err),
-    }),
+    ...(isDevelopment && { error: err.message, stack: err.stack }),
   });
 };
 

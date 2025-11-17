@@ -1,11 +1,18 @@
 import { v2 as cloudinary } from "cloudinary";
 import config from "./config";
 
-cloudinary.config({
-  cloud_name: config.claudinary_cloud_name,
-  api_key: config.claudinary_api_key,
-  api_secret: config.claudinary_api_secret,
-});
+// Validate Cloudinary configuration
+if (!config.claudinary_cloud_name || !config.claudinary_api_key || !config.claudinary_api_secret) {
+  console.warn("⚠️  Cloudinary configuration is missing. Image uploads will fail.");
+  console.warn("Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file");
+} else {
+  cloudinary.config({
+    cloud_name: config.claudinary_cloud_name,
+    api_key: config.claudinary_api_key,
+    api_secret: config.claudinary_api_secret,
+  });
+  console.log("✅ Cloudinary configured successfully");
+}
 
 export const uploadImage = (
   fileBuffer: Buffer,
@@ -27,36 +34,48 @@ export const uploadBase64Image = async (
   base64String: string,
   folder = "portfolio"
 ): Promise<any> => {
+  // Check if Cloudinary is configured
+  if (!config.claudinary_cloud_name || !config.claudinary_api_key || !config.claudinary_api_secret) {
+    throw new Error(
+      "Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file"
+    );
+  }
+
+  if (!base64String) {
+    throw new Error("Base64 image string is required");
+  }
+
   try {
-    // Check if it's a data URL with prefix (data:image/jpeg;base64, or data:image/png;base64,)
-    let mimeType = "image/png"; // default
-    let base64Data = base64String;
-
-    if (base64String.includes(",")) {
-      const parts = base64String.split(",");
-      const dataUrlPrefix = parts[0]; // e.g., "data:image/jpeg;base64"
-      base64Data = parts[1];
-
-      // Extract mime type from prefix
-      if (dataUrlPrefix.includes("image/")) {
-        const mimeMatch = dataUrlPrefix.match(/image\/([^;]+)/);
-        if (mimeMatch) {
-          mimeType = `image/${mimeMatch[1]}`;
-        }
-      }
-    }
-
-    const result = await cloudinary.uploader.upload(
-      `data:${mimeType};base64,${base64Data}`,
-      {
+    // Check if base64String already has data URL prefix
+    if (base64String.startsWith("data:image")) {
+      // Use the base64 string as-is (includes the data URL prefix)
+      const result = await cloudinary.uploader.upload(base64String, {
         folder,
         resource_type: "image",
-      }
+      });
+      return result;
+    } else {
+      // If no prefix, assume it's just base64 data and add a generic prefix
+      const result = await cloudinary.uploader.upload(
+        `data:image/jpeg;base64,${base64String}`,
+        {
+          folder,
+          resource_type: "image",
+        }
+      );
+      return result;
+    }
+  } catch (error: any) {
+    console.error("Error uploading base64 image to Cloudinary:", error);
+    console.error("Error details:", {
+      message: error.message,
+      http_code: error.http_code,
+      name: error.name,
+      response: error.response?.body,
+    });
+    throw new Error(
+      `Failed to upload image to Cloudinary: ${error.message || "Unknown error"}`
     );
-    return result;
-  } catch (error) {
-    console.error("Error uploading base64 image:", error);
-    throw error;
   }
 };
 

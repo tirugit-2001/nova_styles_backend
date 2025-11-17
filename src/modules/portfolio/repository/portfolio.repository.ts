@@ -5,8 +5,8 @@ const createPortfolio = async (data: any) => {
   return await Portfolio.create(data);
 };
 
-const getAllPortfolios = async () => {
-  return await Portfolio.find().sort({ createdAt: -1 });
+const getAllPortfolios = async (filter: any = {}) => {
+  return await Portfolio.find(filter).sort({ createdAt: -1 });
 };
 
 const getPortfolioById = async (id: string) => {
@@ -43,4 +43,4 @@ export default {
   updatePortfolio,
   deletePortfolio,
 };
-
+ 

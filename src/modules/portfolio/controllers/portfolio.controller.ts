@@ -7,7 +7,7 @@ const getPortfolios = async (
   next: NextFunction
 ) => {
   try {
-    const portfolios = await portfolioService.getAllPortfolios();
+    const portfolios = await portfolioService.getAllPortfoliosWithFilter(req.query);
     res.status(200).json({
       success: true,
       portfolios,
@@ -41,7 +41,7 @@ const createPortfolio = async (
   next: NextFunction
 ) => {
   try {
-    const portfolio = await portfolioService.createPortfolio(req.body);
+    const portfolio = await portfolioService.createPortfolio(req.body, req.file as Express.Multer.File | undefined);
     res.status(201).json({
       success: true,
       portfolio,
@@ -60,7 +60,8 @@ const updatePortfolio = async (
   try {
     const portfolio = await portfolioService.updatePortfolio(
       req.params.id,
-      req.body
+      req.body,
+      req.file as Express.Multer.File | undefined
     );
     res.status(200).json({
       success: true,
@@ -88,11 +89,54 @@ const deletePortfolio = async (
   }
 };
 
+const addSection = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const portfolio = await portfolioService.addSection(
+      req.params.id,
+      req.body.name
+    );
+    res.status(200).json({
+      success: true,
+      portfolio,
+      message: "Section added successfully",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const addSectionImages = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const portfolio = await portfolioService.addSectionImages(
+      req.params.id,
+      Number(req.params.sectionIndex),
+      (req.files as Express.Multer.File[]) || []
+    );
+    res.status(200).json({
+      success: true,
+      portfolio,
+      message: "Images added to section successfully",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   getPortfolios,
   getPortfolioById,
   createPortfolio,
   updatePortfolio,
   deletePortfolio,
+  addSection,
+  addSectionImages,
 };
 
