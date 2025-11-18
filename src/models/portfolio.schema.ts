@@ -27,6 +27,10 @@ const portfolioSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    images: {
+      type: [String],
+      default: [],
+    },
     showOnMainHome: { type: Boolean, default: false },
     showOnInteriorHome: { type: Boolean, default: false },
     showOnConstruction: { type: Boolean, default: false },

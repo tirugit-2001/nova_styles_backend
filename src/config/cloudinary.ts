@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import config from "./config";
+import { compressImageForWeb } from "../utils/imageCompression";
 
 // Validate Cloudinary configuration
 if (!config.claudinary_cloud_name || !config.claudinary_api_key || !config.claudinary_api_secret) {
@@ -14,20 +15,38 @@ if (!config.claudinary_cloud_name || !config.claudinary_api_key || !config.claud
   console.log("✅ Cloudinary configured successfully");
 }
 
-export const uploadImage = (
+export const uploadImage = async (
   fileBuffer: Buffer,
   folder = "wallpapers"
 ): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    stream.end(fileBuffer);
-  });
+  try {
+    // Compress image before uploading
+    const compressedBuffer = await compressImageForWeb(fileBuffer);
+    
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(compressedBuffer);
+    });
+  } catch (error) {
+    // If compression fails, upload original buffer
+    console.error("Compression failed, uploading original image:", error);
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(fileBuffer);
+    });
+  }
 };
 
 export const uploadBase64Image = async (

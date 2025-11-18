@@ -27,5 +27,20 @@ router.post(
   portfolioController.addSectionImages
 );
 
+// Gallery Images
+router.post(
+  "/portfolio/:id/images",
+  verifyUser,
+  verifyAdmin,
+  upload.array("images", 30),
+  portfolioController.addPortfolioImages
+);
+router.delete(
+  "/portfolio/:id/images/:imageUrl",
+  verifyUser,
+  verifyAdmin,
+  portfolioController.deletePortfolioImage
+);
+
 export default router;
 

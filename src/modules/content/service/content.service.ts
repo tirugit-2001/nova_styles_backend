@@ -284,13 +284,19 @@ const sendConstructionNotification = async (formData: any) => {
     }).format(price);
   };
 
-  const packagePrice = formData.packagePrice || 0;
-  const totalPrice = formData.totalPrice || 0;
-
-  // Format requirements list
-  const requirementsList = Object.entries(formData.requirements || {})
-    .map(([key, value]) => `<tr><td style="color: #666666; font-weight: bold; width: 50%; padding: 8px;">${key}:</td><td style="color: #333333; padding: 8px;">${value}</td></tr>`)
-    .join("");
+  const {
+    buildingType,
+    sqft,
+    selectedPackage,
+    ratePerSqft,
+    estimatedPrice,
+    name,
+    email,
+    mobile,
+    pincode,
+    whatsappUpdates,
+    suggestions,
+  } = formData;
 
   // Create HTML email template
   const htmlEmail = `
@@ -315,66 +321,43 @@ const sendConstructionNotification = async (formData: any) => {
           <!-- Content -->
           <tr>
             <td style="padding: 30px 20px;">
-              <!-- Project Details Section -->
-              <div style="margin-bottom: 30px;">
-                <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #f59e0b;">📋 Project Details</h2>
-                <table width="100%" cellpadding="8" cellspacing="0">
-                  <tr>
-                    <td style="color: #666666; font-weight: bold; width: 40%;">Project Type:</td>
-                    <td style="color: #333333;">${formData.projectType}</td>
-                  </tr>
-                  <tr>
-                    <td style="color: #666666; font-weight: bold;">Plot Size:</td>
-                    <td style="color: #333333;">${formData.plotSize}</td>
-                  </tr>
-                  <tr>
-                    <td style="color: #666666; font-weight: bold;">Built-up Area:</td>
-                    <td style="color: #333333;">${formData.builtUpArea} sq ft</td>
-                  </tr>
-                </table>
-              </div>
-
-              <!-- Requirements Section -->
-              <div style="margin-bottom: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 6px;">
-                <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #f59e0b;">🏠 Construction Requirements</h2>
-                <table width="100%" cellpadding="8" cellspacing="0">
-                  ${requirementsList}
-                </table>
-              </div>
-
               <!-- Selected Package Section -->
               <div style="margin-bottom: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 6px;">
                 <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #f59e0b;">📦 Selected Package</h2>
                 <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
                     <td style="color: #333333; font-size: 16px; font-weight: bold;">
-                      ${formData.selectedPackage}
+                      ${selectedPackage}
                     </td>
                     <td style="color: #333333; font-size: 16px; font-weight: bold; text-align: right;">
-                      ${formatPrice(packagePrice)}
+                      ${formatPrice(ratePerSqft || 0)} per sq.ft
                     </td>
                   </tr>
                 </table>
               </div>
 
               <!-- Total Estimation Section -->
-              <div style="margin-bottom: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 25px; border-radius: 8px;">
-                <h2 style="color: #ffffff; font-size: 22px; margin: 0 0 20px 0; text-align: center;">💰 Total Estimated Cost</h2>
-                <table width="100%" cellpadding="10" cellspacing="0" style="background-color: rgba(255, 255, 255, 0.1); border-radius: 6px;">
-                  ${packagePrice > 0 ? `
+              <!-- Project Snapshot -->
+              <div style="margin-bottom: 30px;">
+                <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #f59e0b;">📋 Project Snapshot</h2>
+                <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
-                    <td style="color: #ffffff; font-size: 15px; padding: 8px;">Package:</td>
-                    <td style="color: #ffffff; font-size: 15px; font-weight: bold; text-align: right; padding: 8px;">${formatPrice(packagePrice)}</td>
+                    <td style="color: #666666; font-weight: bold; width: 40%;">Building Type:</td>
+                    <td style="color: #333333;">${buildingType}</td>
                   </tr>
-                  ` : ""}
-                  <tr style="border-top: 2px solid rgba(255, 255, 255, 0.3);">
-                    <td style="color: #ffffff; font-size: 18px; font-weight: bold; padding: 12px 8px;">Total:</td>
-                    <td style="color: #ffffff; font-size: 24px; font-weight: bold; text-align: right; padding: 12px 8px;">${formatPrice(totalPrice)}</td>
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">Built-up Area:</td>
+                    <td style="color: #333333;">${sqft?.toLocaleString("en-IN")} sq.ft</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">Rate / Sq.ft:</td>
+                    <td style="color: #333333;">${formatPrice(ratePerSqft || 0)}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">Estimated Cost:</td>
+                    <td style="color: #333333; font-weight: bold;">${formatPrice(estimatedPrice || 0)}</td>
                   </tr>
                 </table>
-                <p style="margin: 15px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 12px; text-align: center; font-style: italic;">
-                  * Final pricing may vary based on specific requirements and site conditions
-                </p>
               </div>
 
               <!-- Contact Information Section -->
@@ -383,28 +366,44 @@ const sendConstructionNotification = async (formData: any) => {
                 <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
                     <td style="color: #666666; font-weight: bold; width: 40%;">Name:</td>
-                    <td style="color: #333333;">${formData.name}</td>
+                    <td style="color: #333333;">${name}</td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Email:</td>
-                    <td style="color: #333333;"><a href="mailto:${formData.email}" style="color: #f59e0b; text-decoration: none;">${formData.email}</a></td>
+                    <td style="color: #333333;"><a href="mailto:${email}" style="color: #f59e0b; text-decoration: none;">${email}</a></td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Mobile:</td>
-                    <td style="color: #333333;"><a href="tel:${formData.mobile}" style="color: #f59e0b; text-decoration: none;">${formData.mobile}</a></td>
+                    <td style="color: #333333;"><a href="tel:${mobile}" style="color: #f59e0b; text-decoration: none;">${mobile}</a></td>
                   </tr>
-                  ${formData.pincode ? `
+                  ${
+                    pincode
+                      ? `
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Pincode:</td>
-                    <td style="color: #333333;">${formData.pincode}</td>
+                    <td style="color: #333333;">${pincode}</td>
                   </tr>
-                  ` : ""}
+                  `
+                      : ""
+                  }
                   <tr>
                     <td style="color: #666666; font-weight: bold;">WhatsApp Updates:</td>
-                    <td style="color: #333333;">${formData.whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                    <td style="color: #333333;">${whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
                   </tr>
                 </table>
               </div>
+
+              ${
+                suggestions
+                  ? `
+              <!-- Additional Notes -->
+              <div style="margin-bottom: 30px; background-color: #fff8e5; padding: 20px; border-radius: 6px;">
+                <h2 style="color: #d97706; font-size: 18px; margin: 0 0 10px 0;">📝 Customer Notes</h2>
+                <p style="color: #333333; margin: 0;">${suggestions}</p>
+              </div>
+              `
+                  : ""
+              }
 
               <!-- Timestamp -->
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
@@ -434,7 +433,7 @@ const sendConstructionNotification = async (formData: any) => {
   try {
     const job = await emailQueue.add("constructionNotification", {
       to: config.adminEmail,
-      subject: `New Construction Consultation Request - ${formData.projectType} - ${formData.name}`,
+      subject: `New Construction Estimate Request - ${selectedPackage} - ${name}`,
       html: htmlEmail,
     });
 

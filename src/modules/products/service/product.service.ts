@@ -5,13 +5,20 @@ import productRepository from "../repository/product.repository";
 /******** create product*******/
 const createProduct = async (data: any, file?: Express.Multer.File) => {
   try {
-    if (data.imageUrl && data.imageUrl.startsWith("data:image")) {
+    if (file) {
+      const uploadResult = await uploadImage(file.buffer, "product-sections");
+      data.image = uploadResult.secure_url;
+    } else if (data.imageUrl && data.imageUrl.startsWith("data:image")) {
       const uploadResult = await cloudinary.uploader.upload(data.imageUrl, {
         folder: "product-sections",
         resource_type: "image",
       });
       data.image = uploadResult.secure_url;
     }
+
+    // clean up temp fields
+    delete data.imageUrl;
+
     return await productRepository.create(data);
   } catch (error: any) {
     throw new Error(`Failed to create product: ${error.message}`);
@@ -34,18 +41,37 @@ const updateProduct = async (
   const existingProduct: any = await productRepository.findById(id);
   if (!existingProduct) throw new Error("Product not found");
 
-  if (file && existingProduct.image) {
-    await deleteImage(existingProduct.image);
-
-    const uploadResult: any = await uploadImage(file.buffer);
-    data.imageUrl = uploadResult.secure_url;
+  if (file) {
+    if (existingProduct.image) {
+      await deleteImage(existingProduct.image);
+    }
+    const uploadResult: any = await uploadImage(file.buffer, "product-sections");
+    data.image = uploadResult.secure_url;
+  } else if (data.imageUrl && data.imageUrl.startsWith("data:image")) {
+    if (existingProduct.image) {
+      await deleteImage(existingProduct.image);
+    }
+    const uploadResult = await cloudinary.uploader.upload(data.imageUrl, {
+      folder: "product-sections",
+      resource_type: "image",
+    });
+    data.image = uploadResult.secure_url;
   }
+
+  delete data.imageUrl;
 
   return await productRepository.update(id, data);
 };
 
 /******** delete product*******/
 const deleteProduct = async (id: string) => {
+  const existingProduct: any = await productRepository.findById(id);
+  if (!existingProduct) throw new Error("Product not found");
+
+  if (existingProduct.image) {
+    await deleteImage(existingProduct.image);
+  }
+
   return await productRepository.remove(id);
 };
 

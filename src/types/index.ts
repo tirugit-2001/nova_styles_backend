@@ -54,23 +54,6 @@ interface IPayment extends Document {
   };
 }
 
-// interface IOrderItem extends Document {
-//   productId: mongoose.Schema.Types.ObjectId | string;
-//   quantity: number;
-//   price: number;
-//   name: string;
-//   imageUrl: string;
-// }
-
-// interface IOrder extends Document {
-//   user: mongoose.Schema.Types.ObjectId | string;
-//   items: IOrderItem[];
-//   shippingAddress: IAddress;
-//   totalAmount: number;
-//   status: "pending" | "shipped" | "delivered" | "canceled";
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
 interface IOrderItem {
   productId: mongoose.Types.ObjectId;
   name: string;
@@ -87,10 +70,24 @@ interface IOrder extends Document {
   addressId: mongoose.Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
-  paymentMethod: "COD" | "Online";
+  paymentMethod: "COD" | "Online" | "cash";
   paymentId?: mongoose.Types.ObjectId;
-  status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+  status: "Pending" | "Processing" | "Shipped" | "Out for Delivery" | "Delivered" | "Completed" | "Cancelled";
+  orderNumber: string;
+  invoiceNumber?: string;
+  invoiceGenerated: boolean;
+  invoiceGeneratedAt?: Date;
+  history: IOrderHistory[];
+  tracking: IShipmentTracking[];
+  currentLocation?: string;
+  completedAt?: Date;
+  cancelledAt?: Date;
+  cancellationReason?: string;
+  adminNotes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
+
 interface IContent extends Document {
   section: "banner" | "services" | "testimonials";
   title?: string;
@@ -112,12 +109,60 @@ declare global {
     }
   }
 }
+interface IOrderHistory {
+  status: string;
+  updatedBy?: mongoose.Types.ObjectId;
+  updatedAt: Date;
+  notes?: string;
+  location?: string;
+}
+
+interface IShipmentTracking {
+  location: string;
+  status: string;
+  updatedAt: Date;
+  updatedBy?: mongoose.Types.ObjectId;
+  notes?: string;
+}
+
+interface IInvoice extends Document {
+  orderId: mongoose.Types.ObjectId;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  customerName: string;
+  customerEmail: string;
+  customerAddress: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone: string;
+  };
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    area?: number;
+    total: number;
+  }>;
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  pdfPath: string;
+  generatedBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export {
   IAddress,
   ICart,
   ICartItem,
   ICartInput,
+  IInvoice,
   IOrder,
   IOrderItem,
   IPayment,

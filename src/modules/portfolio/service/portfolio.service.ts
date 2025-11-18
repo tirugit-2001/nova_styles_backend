@@ -110,9 +110,21 @@ const deletePortfolio = async (id: string) => {
   // Get portfolio to get image URL before deletion
   const portfolio = await portfolioRepository.getPortfolioById(id);
 
-  // Delete image from Cloudinary
+  // Delete main image from Cloudinary
   if (portfolio.image) {
     await deleteImage(portfolio.image);
+  }
+
+  // Delete gallery images from Cloudinary
+  if (portfolio.images && portfolio.images.length > 0) {
+    for (const imageUrl of portfolio.images) {
+      try {
+        await deleteImage(imageUrl);
+      } catch (error) {
+        console.error("Failed to delete gallery image from Cloudinary:", error);
+        // Continue deleting other images even if one fails
+      }
+    }
   }
 
   return await portfolioRepository.deletePortfolio(id);
@@ -166,6 +178,72 @@ const getAllPortfoliosWithFilter = async (query: any) => {
   return await portfolioRepository.getAllPortfolios(filter);
 };
 
+const addPortfolioImages = async (
+  id: string,
+  files: Express.Multer.File[]
+) => {
+  const portfolio = await portfolioRepository.getPortfolioById(id);
+  
+  if (!portfolio) {
+    throw new Apperror("Portfolio not found", 404);
+  }
+  
+  if (!files || files.length === 0) {
+    throw new Apperror("No images provided", 400);
+  }
+
+  const uploadedUrls: string[] = [];
+  for (const file of files) {
+    try {
+      const result = await uploadImage(file.buffer, "portfolio");
+      uploadedUrls.push(result.secure_url);
+    } catch (error: any) {
+      console.error("Failed to upload image:", error);
+      throw new Apperror(
+        error.message || "Failed to upload image to Cloudinary",
+        error.http_code || 500
+      );
+    }
+  }
+
+  // Initialize images array if it doesn't exist
+  if (!portfolio.images) {
+    portfolio.images = [];
+  }
+  
+  portfolio.images.push(...uploadedUrls);
+  // @ts-ignore
+  await portfolio.save();
+  return portfolio;
+};
+
+const deletePortfolioImage = async (id: string, imageUrl: string) => {
+  const portfolio = await portfolioRepository.getPortfolioById(id);
+  
+  if (!portfolio) {
+    throw new Apperror("Portfolio not found", 404);
+  }
+  
+  if (!portfolio.images || !portfolio.images.includes(imageUrl)) {
+    throw new Apperror("Image not found in portfolio", 404);
+  }
+
+  // Remove image from array
+  portfolio.images = portfolio.images.filter((url: string) => url !== imageUrl);
+  
+  // Delete image from Cloudinary
+  try {
+    await deleteImage(imageUrl);
+  } catch (error) {
+    console.error("Failed to delete image from Cloudinary:", error);
+    // Continue even if Cloudinary deletion fails
+  }
+  
+  // @ts-ignore
+  await portfolio.save();
+  return portfolio;
+};
+
 export default {
   createPortfolio,
   getAllPortfolios,
@@ -175,5 +253,7 @@ export default {
   addSection,
   addSectionImages,
   getAllPortfoliosWithFilter,
+  addPortfolioImages,
+  deletePortfolioImage,
 };
 

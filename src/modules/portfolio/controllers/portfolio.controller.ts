@@ -130,6 +130,47 @@ const addSectionImages = async (
   }
 };
 
+const addPortfolioImages = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const portfolio = await portfolioService.addPortfolioImages(
+      req.params.id,
+      (req.files as Express.Multer.File[]) || []
+    );
+    res.status(200).json({
+      success: true,
+      portfolio,
+      message: "Images added to portfolio gallery successfully",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deletePortfolioImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const imageUrl = decodeURIComponent(req.params.imageUrl);
+    const portfolio = await portfolioService.deletePortfolioImage(
+      req.params.id,
+      imageUrl
+    );
+    res.status(200).json({
+      success: true,
+      portfolio,
+      message: "Image deleted from portfolio gallery successfully",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   getPortfolios,
   getPortfolioById,
@@ -138,5 +179,7 @@ export default {
   deletePortfolio,
   addSection,
   addSectionImages,
+  addPortfolioImages,
+  deletePortfolioImage,
 };
 
