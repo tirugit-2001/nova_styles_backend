@@ -115,12 +115,23 @@ const postContactForm = async (
       fields: Object.keys(req.body),
     });
 
+    if (req.file) {
+      if (req.file.mimetype !== "application/pdf") {
+        throw new Apperror("Only PDF attachments are allowed", 400);
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        throw new Apperror("PDF attachment must be under 5MB", 400);
+      }
+    }
+
     // Validate request body
     const validatedData = validate(interiorFormSchema, req.body);
 
     // Send email notification to admin
     const job = await contentService.sendInteriorDesignNotification(
-      validatedData
+      validatedData,
+      req.file ?? undefined
     );
 
     res.status(200).json({

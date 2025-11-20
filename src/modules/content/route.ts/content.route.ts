@@ -12,7 +12,11 @@ const mapConstructionUpload: RequestHandler = (req, _res, next) => {
 };
 
 // Public routes - specific routes before parameterized ones
-router.post("/contact-form", contentController.postContactForm);
+router.post(
+  "/contact-form",
+  upload.single("planPdf"),
+  contentController.postContactForm
+);
 router.post(
   "/construction-form",
   upload.fields([

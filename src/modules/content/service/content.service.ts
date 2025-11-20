@@ -44,7 +44,10 @@ const deleteContent = async (id: string) => {
   return true;
 };
 
-const sendInteriorDesignNotification = async (formData: any) => {
+const sendInteriorDesignNotification = async (
+  formData: any,
+  attachment?: Express.Multer.File
+) => {
   if (!emailQueue) {
     console.warn(
       "⚠️  Email queue is not available (Redis not running). Email will not be sent."
@@ -109,6 +112,16 @@ const sendInteriorDesignNotification = async (formData: any) => {
     formData.suggestions ||
     formData.additionalNotes ||
     "";
+
+  const attachmentNotice = attachment
+    ? `<div style="margin-bottom: 25px; background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 6px;">
+        <p style="margin: 0; color: #065f46; font-size: 14px;">
+          📎 Client uploaded a project brief (PDF): <strong>${
+            attachment.originalname || "project-brief.pdf"
+          }</strong>
+        </p>
+      </div>`
+    : "";
 
   let htmlEmail: string;
   let emailSubject: string;
@@ -190,6 +203,8 @@ const sendInteriorDesignNotification = async (formData: any) => {
                   </tr>
                 </table>
               </div>
+
+              ${attachmentNotice}
 
               <!-- Call to Action Box -->
               <div style="margin-bottom: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 25px; border-radius: 8px; text-align: center;">
@@ -360,6 +375,8 @@ const sendInteriorDesignNotification = async (formData: any) => {
                   : ""
               }
 
+              ${attachmentNotice}
+
               <!-- Timestamp -->
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
                 <p style="margin: 0; color: #999999; font-size: 12px; text-align: center;">
@@ -387,11 +404,23 @@ const sendInteriorDesignNotification = async (formData: any) => {
   }
 
   try {
-    const job = await emailQueue.add("interiorDesignNotification", {
+    const jobData: Record<string, any> = {
       to: config.adminEmail,
       subject: emailSubject,
       html: htmlEmail,
-    });
+    };
+
+    if (attachment) {
+      jobData.attachments = [
+        {
+          filename: attachment.originalname || "project-brief.pdf",
+          content: attachment.buffer,
+          contentType: attachment.mimetype || "application/pdf",
+        },
+      ];
+    }
+
+    const job = await emailQueue.add("interiorDesignNotification", jobData);
 
     console.log("✅ Interior design notification email job added successfully:", job.id);
     return job;
