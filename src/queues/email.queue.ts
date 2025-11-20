@@ -62,7 +62,35 @@ try {
       console.log("📧 Processing email job:", job.id);
       console.log("Job data:", job.data);
 
-      const { to, subject, html } = job.data;
+      const { to, subject, html, attachments } = job.data;
+      const normalizedAttachments = Array.isArray(attachments)
+        ? attachments.map((attachment) => {
+            if (!attachment || !attachment.content) return attachment;
+
+            if (
+              attachment.content instanceof Buffer ||
+              typeof attachment.content === "string"
+            ) {
+              return attachment;
+            }
+
+            if (
+              typeof attachment.content === "object" &&
+              attachment.content.type === "Buffer" &&
+              Array.isArray(attachment.content.data)
+            ) {
+              return {
+                ...attachment,
+                content: Buffer.from(attachment.content.data),
+              };
+            }
+
+            return {
+              ...attachment,
+              content: Buffer.from(String(attachment.content)),
+            };
+          })
+        : undefined;
 
       try {
         const info = await transporter.sendMail({
@@ -70,6 +98,7 @@ try {
           to,
           subject,
           html,
+          attachments: normalizedAttachments,
         });
         console.log("✅ Email sent successfully to", to);
         console.log("Message ID:", info.messageId);

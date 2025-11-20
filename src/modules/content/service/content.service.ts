@@ -67,14 +67,6 @@ const sendInteriorDesignNotification = async (formData: any) => {
     second: "2-digit",
   });
 
-  // Format addons list if any
-  const addonsList =
-    formData.addons && formData.addons.length > 0
-      ? formData.addons
-          .map((addon: string) => `<li>${addon}</li>`)
-          .join("")
-      : "<li>None selected</li>";
-
   // Format prices in Indian currency
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -84,12 +76,156 @@ const sendInteriorDesignNotification = async (formData: any) => {
     }).format(price);
   };
 
+  const escapeHtml = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const formatMessage = (text: string) => {
+    if (!text) return "";
+    return escapeHtml(text).replace(/\n/g, "<br>");
+  };
+
+  const isCustomizedInterior = formData.interiorType === "customized interior" || formData.interiorType === "customised-premium";
   const packagePrice = formData.packagePrice || 0;
   const addonsTotal = formData.addonsTotal || 0;
   const totalPrice = formData.totalPrice || 0;
 
-  // Create HTML email template
-  const htmlEmail = `
+  // Format addons list if any
+  const addonsList =
+    formData.addons && formData.addons.length > 0
+      ? formData.addons
+          .map((addon: string) => `<li>${addon}</li>`)
+          .join("")
+      : "<li>None selected</li>";
+
+  const clientNotes =
+    formData.message ||
+    formData.suggestions ||
+    formData.additionalNotes ||
+    "";
+
+  let htmlEmail: string;
+  let emailSubject: string;
+
+  if (isCustomizedInterior) {
+    // Customized Interior Email Template with Premium Styling
+    emailSubject = `✨ Customized Interior Request - ${formData.name}`;
+    htmlEmail = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.15);">
+          <!-- Premium Header with Badge -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%); padding: 40px 20px; text-align: center; position: relative;">
+              <div style="background-color: rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 8px 20px; display: inline-block; margin-bottom: 15px;">
+                <span style="color: #ffffff; font-size: 14px; font-weight: bold; letter-spacing: 1px;">⭐ PREMIUM REQUEST ⭐</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">✨ Customized Interior Design Request</h1>
+              <p style="margin: 10px 0 0 0; color: rgba(255, 255, 255, 0.95); font-size: 16px; font-weight: 500;">Tailored to Your Unique Vision</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px 20px;">
+              <!-- Special Message Section - Prominently Displayed -->
+              ${formData.message ? `
+              <div style="margin-bottom: 30px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 5px solid #f59e0b; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                  <span style="font-size: 24px; margin-right: 10px;">💬</span>
+                  <h2 style="color: #92400e; font-size: 22px; margin: 0; font-weight: bold;">Client's Custom Requirements</h2>
+                </div>
+                <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; border: 2px solid #f59e0b; margin-top: 15px;">
+                  <p style="margin: 0; color: #333333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${formatMessage(formData.message)}</p>
+                </div>
+              </div>
+              ` : ""}
+
+              <!-- Interior Type Badge -->
+              <div style="margin-bottom: 30px; text-align: center;">
+                <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 12px 30px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);">
+                  🎨 Customized Interior Design
+                </div>
+              </div>
+
+              <!-- Contact Information Section -->
+              <div style="margin-bottom: 30px; background-color: #f8f9fa; padding: 25px; border-radius: 8px; border: 2px solid #f59e0b;">
+                <h2 style="color: #92400e; font-size: 20px; margin: 0 0 20px 0; padding-bottom: 10px; border-bottom: 3px solid #f59e0b;">📞 Contact Information</h2>
+                <table width="100%" cellpadding="10" cellspacing="0">
+                  <tr>
+                    <td style="color: #666666; font-weight: bold; width: 40%; font-size: 15px;">Name:</td>
+                    <td style="color: #333333; font-size: 16px; font-weight: 600;">${formData.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">Email:</td>
+                    <td style="color: #333333;"><a href="mailto:${formData.email}" style="color: #d97706; text-decoration: none; font-weight: 600;">${formData.email}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">Mobile:</td>
+                    <td style="color: #333333;"><a href="tel:${formData.mobile}" style="color: #d97706; text-decoration: none; font-weight: 600; font-size: 16px;">${formData.mobile}</a></td>
+                  </tr>
+                  ${formData.pincode ? `
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">Pincode:</td>
+                    <td style="color: #333333; font-size: 16px;">${formData.pincode}</td>
+                  </tr>
+                  ` : ""}
+                  <tr>
+                    <td style="color: #666666; font-weight: bold;">WhatsApp Updates:</td>
+                    <td style="color: #333333; font-size: 16px;">${formData.whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Call to Action Box -->
+              <div style="margin-bottom: 30px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 25px; border-radius: 8px; text-align: center;">
+                <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: bold;">
+                  🎯 This is a premium customized request - Please prioritize follow-up!
+                </p>
+              </div>
+
+              <!-- Timestamp -->
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #f59e0b;">
+                <p style="margin: 0; color: #999999; font-size: 12px; text-align: center;">
+                  Submitted on: ${timeString} IST
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; text-align: center; border-top: 2px solid #f59e0b;">
+              <p style="margin: 0; color: #92400e; font-size: 13px; font-weight: 600;">
+                ⭐ Premium Customized Interior Request - Nova Styles ⭐
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+  } else {
+    // Modular Interior Email Template (Existing)
+    emailSubject = `New Modular Interior Design Request - ${formData.floorplan || "N/A"} - ${formData.name}`;
+    htmlEmail = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -104,7 +240,7 @@ const sendInteriorDesignNotification = async (formData: any) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">🏠 Interior Design Consultation Request</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">🏠 Modular Interior Design Consultation Request</h1>
             </td>
           </tr>
           
@@ -117,7 +253,7 @@ const sendInteriorDesignNotification = async (formData: any) => {
                 <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
                     <td style="color: #666666; font-weight: bold; width: 40%;">Floorplan:</td>
-                    <td style="color: #333333;">${formData.floorplan}</td>
+                    <td style="color: #333333;">${formData.floorplan || "N/A"}</td>
                   </tr>
                   ${formData.purpose ? `
                   <tr>
@@ -134,7 +270,7 @@ const sendInteriorDesignNotification = async (formData: any) => {
                 <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
                     <td style="color: #333333; font-size: 16px; font-weight: bold;">
-                      ${formData.selectedPackage}
+                      ${formData.selectedPackage || "N/A"}
                     </td>
                     <td style="color: #333333; font-size: 16px; font-weight: bold; text-align: right;">
                       ${formatPrice(packagePrice)}
@@ -212,6 +348,18 @@ const sendInteriorDesignNotification = async (formData: any) => {
                 </table>
               </div>
 
+              ${
+                clientNotes
+                  ? `
+              <!-- Message Section (if provided) -->
+              <div style="margin-bottom: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 6px; border-left: 4px solid #667eea;">
+                <h2 style="color: #333333; font-size: 18px; margin: 0 0 10px 0;">💬 Additional Message:</h2>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${formatMessage(clientNotes)}</p>
+              </div>
+              `
+                  : ""
+              }
+
               <!-- Timestamp -->
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
                 <p style="margin: 0; color: #999999; font-size: 12px; text-align: center;">
@@ -235,12 +383,13 @@ const sendInteriorDesignNotification = async (formData: any) => {
   </table>
 </body>
 </html>
-  `.trim();
+    `.trim();
+  }
 
   try {
     const job = await emailQueue.add("interiorDesignNotification", {
       to: config.adminEmail,
-      subject: `New Interior Design Consultation Request - ${formData.floorplan} - ${formData.name}`,
+      subject: emailSubject,
       html: htmlEmail,
     });
 
@@ -252,7 +401,10 @@ const sendInteriorDesignNotification = async (formData: any) => {
   }
 };
 
-const sendConstructionNotification = async (formData: any) => {
+const sendConstructionNotification = async (
+  formData: any,
+  attachment?: Express.Multer.File
+) => {
   if (!emailQueue) {
     console.warn(
       "⚠️  Email queue is not available (Redis not running). Email will not be sent."
@@ -285,12 +437,79 @@ const sendConstructionNotification = async (formData: any) => {
   };
 
   const packagePrice = formData.packagePrice || 0;
-  const totalPrice = formData.totalPrice || 0;
+  const totalPrice = formData.totalPrice || formData.estimatedPrice || 0;
 
-  // Format requirements list
-  const requirementsList = Object.entries(formData.requirements || {})
-    .map(([key, value]) => `<tr><td style="color: #666666; font-weight: bold; width: 50%; padding: 8px;">${key}:</td><td style="color: #333333; padding: 8px;">${value}</td></tr>`)
-    .join("");
+  const projectDetailsRows =
+    [
+      formData.projectType
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 40%;">Project Type:</td>
+            <td style="color: #333333;">${formData.projectType}</td>
+          </tr>`
+        : "",
+      formData.buildingType
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 40%;">Building Type:</td>
+            <td style="color: #333333;">${formData.buildingType}</td>
+          </tr>`
+        : "",
+      formData.plotSize
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 40%;">Plot Size:</td>
+            <td style="color: #333333;">${formData.plotSize}</td>
+          </tr>`
+        : "",
+      formData.builtUpArea
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 40%;">Built-up Area:</td>
+            <td style="color: #333333;">${formData.builtUpArea}</td>
+          </tr>`
+        : "",
+      formData.sqft
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 40%;">Project Size:</td>
+            <td style="color: #333333;">${formData.sqft} sq ft</td>
+          </tr>`
+        : "",
+      formData.ratePerSqft
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 40%;">Rate / sq ft:</td>
+            <td style="color: #333333;">${formatPrice(formData.ratePerSqft)}</td>
+          </tr>`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("") ||
+    `<tr>
+      <td style="color: #666666; font-weight: bold; width: 40%;">Project Type:</td>
+      <td style="color: #333333;">Not specified</td>
+    </tr>`;
+
+  const requirementsEntries =
+    formData.requirements && Object.keys(formData.requirements).length > 0
+      ? Object.entries(formData.requirements)
+          .map(
+            ([key, value]) => `<tr>
+          <td style="color: #666666; font-weight: bold; width: 50%; padding: 8px;">${key}:</td>
+          <td style="color: #333333; padding: 8px;">${value}</td>
+        </tr>`
+          )
+          .join("")
+      : `<tr>
+          <td colspan="2" style="color: #666666; padding: 8px; font-style: italic;">
+            No detailed requirements were provided.
+          </td>
+        </tr>`;
+
+  const clientNotes = formData.suggestions || formData.message;
+
+  const attachmentNotice = attachment
+    ? `<div style="margin-bottom: 25px; background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 6px;">
+        <p style="margin: 0; color: #065f46; font-size: 14px;">
+          📎 Client uploaded a project brief (PDF): <strong>${attachment.originalname || "project-brief.pdf"}</strong>
+        </p>
+      </div>`
+    : "";
 
   // Create HTML email template
   const htmlEmail = `
@@ -319,18 +538,7 @@ const sendConstructionNotification = async (formData: any) => {
               <div style="margin-bottom: 30px;">
                 <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #f59e0b;">📋 Project Details</h2>
                 <table width="100%" cellpadding="8" cellspacing="0">
-                  <tr>
-                    <td style="color: #666666; font-weight: bold; width: 40%;">Project Type:</td>
-                    <td style="color: #333333;">${formData.projectType}</td>
-                  </tr>
-                  <tr>
-                    <td style="color: #666666; font-weight: bold;">Plot Size:</td>
-                    <td style="color: #333333;">${formData.plotSize}</td>
-                  </tr>
-                  <tr>
-                    <td style="color: #666666; font-weight: bold;">Built-up Area:</td>
-                    <td style="color: #333333;">${formData.builtUpArea} sq ft</td>
-                  </tr>
+                  ${projectDetailsRows}
                 </table>
               </div>
 
@@ -338,7 +546,7 @@ const sendConstructionNotification = async (formData: any) => {
               <div style="margin-bottom: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 6px;">
                 <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #f59e0b;">🏠 Construction Requirements</h2>
                 <table width="100%" cellpadding="8" cellspacing="0">
-                  ${requirementsList}
+                  ${requirementsEntries}
                 </table>
               </div>
 
@@ -432,11 +640,25 @@ const sendConstructionNotification = async (formData: any) => {
   `.trim();
 
   try {
-    const job = await emailQueue.add("constructionNotification", {
+    const jobData: Record<string, any> = {
       to: config.adminEmail,
-      subject: `New Construction Consultation Request - ${formData.projectType} - ${formData.name}`,
+      subject: `New Construction Consultation Request - ${
+        formData.projectType || formData.buildingType || "Construction"
+      } - ${formData.name}`,
       html: htmlEmail,
-    });
+    };
+
+    if (attachment) {
+      jobData.attachments = [
+        {
+          filename: attachment.originalname || "project-brief.pdf",
+          content: attachment.buffer,
+          contentType: "application/pdf",
+        },
+      ];
+    }
+
+    const job = await emailQueue.add("constructionNotification", jobData);
 
     console.log("✅ Construction notification email job added successfully:", job.id);
     return job;

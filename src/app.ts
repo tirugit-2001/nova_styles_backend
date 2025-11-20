@@ -15,7 +15,9 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.json());
+// Increase body size limit to 50MB for base64 image uploads
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/api/webhook", express.raw({ type: "application/json" }));
 app.use(helmet());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));

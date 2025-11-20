@@ -3,21 +3,62 @@ import { uploadBase64Image, deleteImage } from "../../../config/cloudinary";
 import Apperror from "../../../utils/apperror";
 
 const createPortfolio = async (data: any) => {
-  // Check if image is base64 string or already a URL
-  if (data.image && !data.image.startsWith("http")) {
-    try {
-      const uploadResult = await uploadBase64Image(data.image, "portfolio");
-      data.image = uploadResult.secure_url;
-    } catch (error) {
-      throw new Apperror("Failed to upload image to Cloudinary", 500);
+  try {
+    // Validate required fields
+    if (!data.title || !data.location || !data.category) {
+      throw new Apperror("Title, location, and category are required", 400);
     }
-  }
 
-  if (!data.image) {
-    throw new Apperror("Image is required", 400);
-  }
+    // Check if image is base64 string or already a URL
+    if (data.image && !data.image.startsWith("http")) {
+      try {
+        console.log("Uploading image to Cloudinary...");
+        const uploadResult = await uploadBase64Image(data.image, "portfolio");
+        if (!uploadResult || !uploadResult.secure_url) {
+          throw new Apperror("Failed to upload image: No URL returned", 500);
+        }
+        data.image = uploadResult.secure_url;
+        console.log("Image uploaded successfully:", uploadResult.secure_url);
+      } catch (error: any) {
+        console.error("Cloudinary upload error:", error);
+        throw new Apperror(
+          error.message || "Failed to upload image to Cloudinary",
+          error.http_code || 500
+        );
+      }
+    }
 
-  return await portfolioRepository.createPortfolio(data);
+    if (!data.image) {
+      throw new Apperror("Image is required", 400);
+    }
+
+    // Create portfolio in database
+    console.log("Creating portfolio with data:", {
+      title: data.title,
+      location: data.location,
+      category: data.category,
+      image: data.image ? "Present" : "Missing",
+    });
+
+    const portfolio = await portfolioRepository.createPortfolio(data);
+    return portfolio;
+  } catch (error: any) {
+    console.error("Error in createPortfolio:", error);
+    // If it's already an Apperror, rethrow it
+    if (error instanceof Apperror) {
+      throw error;
+    }
+    // Handle Mongoose validation errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e: any) => e.message);
+      throw new Apperror(`Validation Error: ${messages.join(", ")}`, 400);
+    }
+    // Generic error
+    throw new Apperror(
+      error.message || "Failed to create portfolio",
+      500
+    );
+  }
 };
 
 const getAllPortfolios = async () => {
