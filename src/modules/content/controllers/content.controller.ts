@@ -3,6 +3,33 @@ import contentService from "../service/content.service";
 import { validate } from "../../../utils/validateschema";
 import { interiorFormSchema } from "../../../utils/schemas/interiorFormSchema";
 import { constructionFormSchema } from "../../../utils/schemas/constructionFormSchema";
+import Apperror from "../../../utils/apperror";
+
+const normalizeConstructionPayload = (data: any) => {
+  const normalized = { ...data };
+
+  if (!normalized.totalPrice && normalized.estimatedPrice) {
+    normalized.totalPrice = normalized.estimatedPrice;
+  }
+
+  if (!normalized.packagePrice && normalized.ratePerSqft && normalized.sqft) {
+    normalized.packagePrice = normalized.ratePerSqft * normalized.sqft;
+  }
+
+  if (!normalized.message && normalized.suggestions) {
+    normalized.message = normalized.suggestions;
+  }
+
+  if (!normalized.projectType && normalized.buildingType) {
+    normalized.projectType = normalized.buildingType;
+  }
+
+  if (!normalized.builtUpArea && normalized.sqft) {
+    normalized.builtUpArea = `${normalized.sqft} sq ft`;
+  }
+
+  return normalized;
+};
 
 const createContent = async (
   req: Request,
@@ -81,12 +108,30 @@ const postContactForm = async (
   next: NextFunction
 ) => {
   try {
+    // Log incoming request for debugging
+    console.log("Contact form request received:", {
+      interiorType: req.body.interiorType,
+      hasMessage: !!req.body.message,
+      fields: Object.keys(req.body),
+    });
+
+    if (req.file) {
+      if (req.file.mimetype !== "application/pdf") {
+        throw new Apperror("Only PDF attachments are allowed", 400);
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        throw new Apperror("PDF attachment must be under 5MB", 400);
+      }
+    }
+
     // Validate request body
     const validatedData = validate(interiorFormSchema, req.body);
 
     // Send email notification to admin
     const job = await contentService.sendInteriorDesignNotification(
-      validatedData
+      validatedData,
+      req.file ?? undefined
     );
 
     res.status(200).json({
@@ -95,6 +140,7 @@ const postContactForm = async (
       jobId: job?.id,
     });
   } catch (err) {
+    console.error("Contact form validation error:", err);
     next(err);
   }
 };
@@ -105,12 +151,22 @@ const postConstructionForm = async (
   next: NextFunction
 ) => {
   try {
-    // Validate request body
     const validatedData = validate(constructionFormSchema, req.body);
+    const normalizedData = normalizeConstructionPayload(validatedData);
 
-    // Send email notification to admin
+    if (req.file) {
+      if (req.file.mimetype !== "application/pdf") {
+        throw new Apperror("Only PDF attachments are allowed", 400);
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        throw new Apperror("PDF attachment must be under 5MB", 400);
+      }
+    }
+
     const job = await contentService.sendConstructionNotification(
-      validatedData
+      normalizedData,
+      req.file ?? undefined
     );
 
     res.status(200).json({

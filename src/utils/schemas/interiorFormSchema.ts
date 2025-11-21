@@ -1,18 +1,60 @@
 import Joi from "joi";
 
+const interiorTypeMap: Record<string, string> = {
+  "modular interior": "modular interior",
+  modular: "modular interior",
+  "customized interior": "customized interior",
+  customized: "customized interior",
+  "customised interior": "customized interior",
+  "customised-premium": "customised-premium",
+  "customised premium": "customised-premium",
+  "customized-premium": "customised-premium",
+  premium: "customised-premium",
+};
+
 const interiorFormSchema = Joi.object({
-  floorplan: Joi.string()
-    .valid("1 BHK", "2 BHK", "3 BHK")
+  interiorType: Joi.string()
+    .custom((value, helpers) => {
+      if (!value) {
+        return value;
+      }
+
+      const normalized = interiorTypeMap[value.trim().toLowerCase()];
+
+      if (!normalized) {
+        return helpers.error("any.only");
+      }
+
+      return normalized;
+    })
     .required()
     .messages({
-      "any.only": "Floorplan must be one of: 1 BHK, 2 BHK, 3 BHK",
-      "any.required": "Floorplan is required",
+      "any.only": "Interior type must be 'modular interior', 'customized interior', or 'customised-premium'",
+      "any.required": "Interior type is required",
+    }),
+  floorplan: Joi.string()
+    .valid("1 BHK", "2 BHK", "3 BHK")
+    .when("interiorType", {
+      is: "modular interior",
+      then: Joi.required().messages({
+        "any.only": "Floorplan must be one of: 1 BHK, 2 BHK, 3 BHK",
+        "any.required": "Floorplan is required for modular interior",
+      }),
+      otherwise: Joi.optional().allow("", null),
     }),
   purpose: Joi.string().optional().allow(""),
-  selectedPackage: Joi.string().required().messages({
-    "any.required": "Selected package is required",
-  }),
+  selectedPackage: Joi.string()
+    .when("interiorType", {
+      is: "modular interior",
+      then: Joi.required().messages({
+        "any.required": "Selected package is required for modular interior",
+      }),
+      otherwise: Joi.optional().allow("", null),
+    }),
   addons: Joi.array().items(Joi.string()).optional().default([]),
+  message: Joi.string().max(1000).optional().allow("").messages({
+    "string.max": "Message cannot exceed 1000 characters",
+  }),
   name: Joi.string().min(2).max(100).required().messages({
     "string.min": "Name must be at least 2 characters long",
     "string.max": "Name cannot exceed 100 characters",
@@ -43,10 +85,16 @@ const interiorFormSchema = Joi.object({
   whatsappUpdates: Joi.boolean().optional().default(false),
   packagePrice: Joi.number().min(0).optional(),
   addonsTotal: Joi.number().min(0).optional(),
-  totalPrice: Joi.number().min(0).required().messages({
-    "any.required": "Total price is required",
-    "number.min": "Total price must be a positive number",
-  }),
+  totalPrice: Joi.number()
+    .min(0)
+    .when("interiorType", {
+      is: "modular interior",
+      then: Joi.required().messages({
+        "any.required": "Total price is required for modular interior",
+        "number.min": "Total price must be a positive number",
+      }),
+      otherwise: Joi.optional().default(0),
+    }),
 });
 
 export { interiorFormSchema };

@@ -23,22 +23,21 @@ const createPortfolio = async (data: any, file?: Express.Multer.File) => {
           error.http_code || 500
         );
       }
-    } 
-    // else if (data.image && !data.image.startsWith("http")) {
-    //   // Backward compatibility: handle base64 string
-    //   try {
-    //     const uploadResult = await uploadBase64Image(data.image, "portfolio");
-    //     if (!uploadResult || !uploadResult.secure_url) {
-    //       throw new Apperror("Failed to upload image: No URL returned", 500);
-    //     }
-    //     data.image = uploadResult.secure_url;
-    //   } catch (error: any) {
-    //     throw new Apperror(
-    //       error.message || "Failed to upload image to Cloudinary",
-    //       error.http_code || 500
-    //     );
-    //   }
-    // }
+    } else if (data.image && !data.image.startsWith("http")) {
+      // Backward compatibility: handle base64 string payloads
+      try {
+        const uploadResult = await uploadBase64Image(data.image, "portfolio");
+        if (!uploadResult || !uploadResult.secure_url) {
+          throw new Apperror("Failed to upload image: No URL returned", 500);
+        }
+        data.image = uploadResult.secure_url;
+      } catch (error: any) {
+        throw new Apperror(
+          error.message || "Failed to upload image to Cloudinary",
+          error.http_code || 500
+        );
+      }
+    }
 
     if (!data.image) {
       throw new Apperror("Image is required", 400);
@@ -48,6 +47,7 @@ const createPortfolio = async (data: any, file?: Express.Multer.File) => {
     const portfolio = await portfolioRepository.createPortfolio(data);
     return portfolio;
   } catch (error: any) {
+    console.error("Error in createPortfolio:", error);
     // If it's already an Apperror, rethrow it
     if (error instanceof Apperror) {
       throw error;
