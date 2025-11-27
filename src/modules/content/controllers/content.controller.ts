@@ -24,6 +24,13 @@ const normalizeConstructionPayload = (data: any) => {
     normalized.projectType = normalized.buildingType;
   }
 
+  if (
+    normalized.constructionType === "customised-premium" &&
+    !normalized.projectType
+  ) {
+    normalized.projectType = "Customised Premium Construction";
+  }
+
   if (!normalized.builtUpArea && normalized.sqft) {
     normalized.builtUpArea = `${normalized.sqft} sq ft`;
   }
