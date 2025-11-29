@@ -64,7 +64,53 @@ const createPaymentOrder = async (
       },
     };
 
-    const razorpayOrder = await razorpay.orders.create(options);
+    let razorpayOrder;
+    try {
+      console.log("Creating Razorpay order with amount:", amount, "INR");
+      razorpayOrder = await razorpay.orders.create(options);
+      console.log("Razorpay order created successfully:", razorpayOrder.id);
+    } catch (razorpayError: any) {
+      // Handle Razorpay-specific errors
+      const errorMessage = 
+        razorpayError?.error?.description || 
+        razorpayError?.description || 
+        razorpayError?.message || 
+        "Failed to create Razorpay order";
+      
+      // Map Razorpay error codes to HTTP status codes
+      let httpStatusCode = 400; // default
+      if (razorpayError?.statusCode && typeof razorpayError.statusCode === 'number') {
+        httpStatusCode = razorpayError.statusCode;
+      } else if (razorpayError?.error?.code) {
+        // Map Razorpay error codes to HTTP status codes
+        const razorpayCode = razorpayError.error.code;
+        if (razorpayCode === 'BAD_REQUEST_ERROR' || razorpayCode === 'AUTHENTICATION_ERROR') {
+          httpStatusCode = 401;
+        } else if (razorpayCode === 'GATEWAY_ERROR' || razorpayCode === 'SERVER_ERROR') {
+          httpStatusCode = 500;
+        } else if (razorpayCode === 'NOT_FOUND_ERROR') {
+          httpStatusCode = 404;
+        }
+      }
+      
+      // Enhanced error logging for debugging
+      console.error("❌ Razorpay API Error:");
+      console.error("   Message:", errorMessage);
+      console.error("   Code:", razorpayError?.error?.code || "N/A");
+      console.error("   Status Code:", razorpayError?.statusCode || httpStatusCode);
+      if (razorpayError?.error?.field) {
+        console.error("   Field:", razorpayError.error.field);
+      }
+      console.error("   Full error:", JSON.stringify(razorpayError, null, 2));
+      
+      // Provide helpful error message based on error type
+      let userFriendlyMessage = errorMessage;
+      if (razorpayError?.error?.code === 'BAD_REQUEST_ERROR' && errorMessage.includes('Authentication')) {
+        userFriendlyMessage = "Razorpay authentication failed. Please check your API keys in the server configuration.";
+      }
+      
+      throw new Apperror(userFriendlyMessage, httpStatusCode);
+    }
 
     const payment = await paymentRepo.create(
       {
@@ -84,7 +130,39 @@ const createPaymentOrder = async (
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    throw err;
+    // If it's already an Apperror, re-throw it
+    if (err instanceof Apperror) {
+      throw err;
+    }
+    // Handle other errors (including Razorpay errors that weren't caught above)
+    if (err && typeof err === 'object' && 'error' in err) {
+      const razorpayError = err as any;
+      const errorMessage = 
+        razorpayError?.error?.description || 
+        razorpayError?.description || 
+        razorpayError?.message || 
+        "Payment order creation failed";
+      
+      // Map Razorpay error codes to HTTP status codes
+      let httpStatusCode = 400; // default
+      if (razorpayError?.statusCode && typeof razorpayError.statusCode === 'number') {
+        httpStatusCode = razorpayError.statusCode;
+      } else if (razorpayError?.error?.code) {
+        const razorpayCode = razorpayError.error.code;
+        if (razorpayCode === 'BAD_REQUEST_ERROR' || razorpayCode === 'AUTHENTICATION_ERROR') {
+          httpStatusCode = 401;
+        } else if (razorpayCode === 'GATEWAY_ERROR' || razorpayCode === 'SERVER_ERROR') {
+          httpStatusCode = 500;
+        } else if (razorpayCode === 'NOT_FOUND_ERROR') {
+          httpStatusCode = 404;
+        }
+      }
+      
+      throw new Apperror(errorMessage, httpStatusCode);
+    }
+    // Convert unknown errors to Apperror
+    const errorMessage = err instanceof Error ? err.message : "Payment order creation failed";
+    throw new Apperror(errorMessage, 400);
   }
 };
 

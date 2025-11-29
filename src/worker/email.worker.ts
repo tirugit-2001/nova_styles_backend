@@ -3,9 +3,10 @@ import nodemailer from "nodemailer";
 import config from "../config/config";
 
 const connection = {
-  host: config.redis_host,
-  port: Number(config.redis_port),
-  password: config.redis_password,
+  host: config.redis_host || "127.0.0.1",
+  port: Number(config.redis_port) || 6379,
+  // Only include password if it's set (Redis may not require authentication)
+  ...(config.redis_password && { password: config.redis_password }),
   //   tls: {
   //     rejectUnauthorized: false, // allow secure connection
   //   },

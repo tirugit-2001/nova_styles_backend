@@ -3,9 +3,10 @@ import nodemailer from "nodemailer";
 import config from "../config/config";
 
 const connection = {
-  host: config.redis_host,
-  port: Number(config.redis_port),
-  password: config.redis_password,
+  host: config.redis_host || "127.0.0.1",
+  port: Number(config.redis_port) || 6379,
+  // Only include password if it's set (Redis may not require authentication)
+  ...(config.redis_password && { password: config.redis_password }),
   // tls: {
   //   rejectUnauthorized: false, // allow secure connection
   // },
@@ -124,14 +125,23 @@ try {
       err &&
       typeof err === "object" &&
       "message" in err &&
-      typeof (err as Error).message === "string" &&
-      ((err as Error).message.includes("ECONNREFUSED") ||
-        (err as Error).message.includes("6379"))
+      typeof (err as Error).message === "string"
     ) {
-      logErrorOnce(
-        "⚠️  Redis connection error (Redis not running). Email queue will not work until Redis is started.",
-        err
-      );
+      const errorMessage = (err as Error).message;
+      
+      if (errorMessage.includes("ECONNREFUSED") || errorMessage.includes("6379")) {
+        logErrorOnce(
+          "⚠️  Redis connection error (Redis not running). Email queue will not work until Redis is started.",
+          err
+        );
+      } else if (errorMessage.includes("WRONGPASS") || errorMessage.includes("invalid username-password")) {
+        logErrorOnce(
+          "⚠️  Redis authentication failed. Check your REDIS_PASSWORD in .env file. If Redis doesn't require a password, remove REDIS_PASSWORD from .env or leave it empty.",
+          err
+        );
+      } else {
+        console.error("❌ Worker error:", err);
+      }
     } else {
       console.error("❌ Worker error:", err);
     }
