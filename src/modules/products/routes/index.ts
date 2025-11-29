@@ -13,7 +13,13 @@ router.post(
 router.get("/trending", productController.getTrendingProducts);
 router.get("/", productController.getProducts);
 router.get("/:id", productController.getProductById);
-router.put("/:id", verifyUser, verifyAdmin, productController.updateProduct);
+router.put(
+  "/:id",
+  verifyUser,
+  verifyAdmin,
+  upload.single("image"),
+  productController.updateProduct
+);
 router.delete("/:id", verifyUser, verifyAdmin, productController.deleteProduct);
 
 export default router;

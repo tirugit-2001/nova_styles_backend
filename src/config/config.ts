@@ -26,23 +26,3 @@ const config = {
 };
 
 export default config;
-// PORT=8500
-// MONGO_URI=mongodb+srv://tiru:tiru9@cluster0.q8y0qjy.mongodb.net/nova_styles?retryWrites=true&w=majority&appName=Cluster0
-// JWT_ACCESS_TOKEN_SECRET=fdafafa43389kdfja4389tuhgkdsgjks
-// JWT_REFRESH_TOKEN_SECRET=fdaafdajfldkjkafj340934934034jg0934tu394u
-// NODE_ENV=development
-// CLOUDINARY_CLOUD_NAME=dcvkduuax
-// CLOUDINARY_API_KEY=616798363497791
-// CLOUDINARY_API_SECRET=g1SI3SJ6X_xj82N5PFT4i4iYMrU
-// RAZORPAY_KEY_ID=rzp_test_RWCYoeAwCusnnW
-// RAZORPAY_KEY_SECRET=5pQzpFpVW2rhf63dyMNXq0Kd
-
-// CLOUDINARY_URL=cloudinary://616798363497791:g1SI3SJ6X_xj82N5PFT4i4iYMrU@dcvkduuax
-
-// REDIS_HOST=127.0.0.1
-// REDIS_PORT=6379
-
-// SMTP_HOST=smtp.gmail.com
-// SMTP_PORT=465
-// SMTP_USER=etiru9.2001@gmail.com
-// SMTP_PASS=bupu jjxs ouat kflf

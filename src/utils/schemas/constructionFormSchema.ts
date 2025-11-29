@@ -137,9 +137,34 @@ const modernConstructionSchema = Joi.object({
   message: Joi.string().max(2000).optional().allow(""),
 });
 
+const premiumConstructionSchema = Joi.object({
+  ...contactFields,
+  constructionType: Joi.string()
+    .valid("customised-premium")
+    .required()
+    .messages({
+      "any.only": "Premium submissions must specify customised-premium",
+      "any.required": "Construction type is required",
+    }),
+  buildingType: Joi.string()
+    .valid(...buildingTypeOptions)
+    .optional()
+    .allow(""),
+  sqft: Joi.number().min(0).optional(),
+  selectedPackage: Joi.string()
+    .valid("Basic", "Standard", "Premium")
+    .optional()
+    .allow(""),
+  ratePerSqft: Joi.number().min(0).optional(),
+  estimatedPrice: Joi.number().min(0).optional(),
+  suggestions: Joi.string().max(2000).optional().allow(""),
+  message: Joi.string().max(2000).optional().allow(""),
+});
+
 const constructionFormSchema = Joi.alternatives().try(
   legacyConstructionSchema,
-  modernConstructionSchema
+  modernConstructionSchema,
+  premiumConstructionSchema
 );
 
 export { constructionFormSchema };

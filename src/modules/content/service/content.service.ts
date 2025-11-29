@@ -4,6 +4,22 @@ import contentRepository from "../repository/content.repository";
 import { emailQueue } from "../../../queues/email.queue";
 import config from "../../../config/config";
 
+const escapeHtml = (text?: string) => {
+  if (!text) return "";
+  return text
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+const formatMessage = (text?: string) => {
+  if (!text) return "";
+  return escapeHtml(text).replace(/\n/g, "<br>");
+};
+
 const createContent = async (data: any, file?: Express.Multer.File) => {
   if (!file) {
     throw new Apperror("image is required ", 401);
@@ -77,21 +93,6 @@ const sendInteriorDesignNotification = async (
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(price);
-  };
-
-  const escapeHtml = (text: string) => {
-    if (!text) return "";
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  };
-
-  const formatMessage = (text: string) => {
-    if (!text) return "";
-    return escapeHtml(text).replace(/\n/g, "<br>");
   };
 
   const isCustomizedInterior = formData.interiorType === "customized interior" || formData.interiorType === "customised-premium";
@@ -543,7 +544,10 @@ const sendConstructionNotification = async (
     pincode,
     whatsappUpdates,
     suggestions,
+    constructionType,
   } = formData;
+
+  const isPremiumConstruction = constructionType === "customised-premium";
 
   const attachmentNotice = attachment
     ? `<div style="margin-bottom: 25px; background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 6px;">
@@ -553,8 +557,151 @@ const sendConstructionNotification = async (
       </div>`
     : "";
 
-  // Create HTML email template
-  const htmlEmail = `
+  const premiumSnapshotRows =
+    [
+      buildingType
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold; width: 45%;">Preferred Build:</td>
+            <td style="color: #333333;">${buildingType}</td>
+          </tr>`
+        : "",
+      typeof sqft === "number" && sqft > 0
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold;">Approx. Size:</td>
+            <td style="color: #333333;">${sqft.toLocaleString("en-IN")} sq.ft</td>
+          </tr>`
+        : "",
+      selectedPackage
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold;">Interested Package:</td>
+            <td style="color: #333333;">${selectedPackage}</td>
+          </tr>`
+        : "",
+      typeof ratePerSqft === "number" && ratePerSqft > 0
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold;">Indicative Rate:</td>
+            <td style="color: #333333;">${formatPrice(ratePerSqft)} / sq.ft</td>
+          </tr>`
+        : "",
+      typeof estimatedPrice === "number" && estimatedPrice > 0
+        ? `<tr>
+            <td style="color: #666666; font-weight: bold;">Budget Estimate:</td>
+            <td style="color: #333333; font-weight: 600;">${formatPrice(estimatedPrice)}</td>
+          </tr>`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("") ||
+    `<tr>
+        <td style="color: #666666; font-weight: bold; width: 45%;">Project Snapshot:</td>
+        <td style="color: #333333;">Details not provided</td>
+      </tr>`;
+
+  const premiumNotesSection =
+    suggestions || clientNotes
+      ? `
+        <div style="margin-bottom: 30px; background: #fff7ed; border-left: 5px solid #f97316; padding: 20px; border-radius: 8px;">
+          <h2 style="color: #9a3412; font-size: 18px; margin: 0 0 10px 0;">📝 Client Brief</h2>
+          <p style="margin: 0; color: #4a5568; line-height: 1.6;">${formatMessage(
+            suggestions || clientNotes
+          )}</p>
+        </div>
+      `
+      : "";
+
+  let htmlEmail: string;
+  let emailSubject: string;
+
+  if (isPremiumConstruction) {
+    emailSubject = `⭐ Premium Construction Request - ${name}`;
+    htmlEmail = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.12);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 40%, #b45309 100%); padding: 40px 30px; text-align: center;">
+              <div style="display: inline-block; padding: 6px 16px; background-color: rgba(255,255,255,0.2); border-radius: 999px; font-size: 13px; letter-spacing: 1px; color: #fff; margin-bottom: 12px;">PREMIUM CONSTRUCTION</div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 30px; font-weight: 700;">High-Priority Consultation Request</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 10px 0 0 0; font-size: 16px;">Client opted for the Customised Premium Construction flow</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 30px;">
+              <div style="margin-bottom: 28px; background: #fef3c7; border: 1px solid #facc15; border-radius: 10px; padding: 20px;">
+                <h2 style="margin: 0 0 8px 0; color: #92400e; font-size: 20px;">Client Summary</h2>
+                <p style="margin: 0; color: #7c2d12; font-size: 15px;">Please prioritize outreach within 1 business hour.</p>
+              </div>
+
+              <div style="margin-bottom: 30px;">
+                <h3 style="color: #1f2937; font-size: 18px; margin: 0 0 12px 0;">📞 Contact Information</h3>
+                <table width="100%" cellpadding="8" cellspacing="0">
+                  <tr>
+                    <td style="color: #6b7280; font-weight: bold; width: 45%;">Name</td>
+                    <td style="color: #111827; font-weight: 600;">${name}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #6b7280; font-weight: bold;">Email</td>
+                    <td style="color: #2563eb;"><a href="mailto:${email}" style="color: #2563eb; text-decoration: none;">${email}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="color: #6b7280; font-weight: bold;">Mobile</td>
+                    <td style="color: #111827; font-weight: 600;"><a href="tel:${mobile}" style="color: inherit; text-decoration: none;">${mobile}</a></td>
+                  </tr>
+                  ${
+                    pincode
+                      ? `<tr>
+                    <td style="color: #6b7280; font-weight: bold;">Pincode</td>
+                    <td style="color: #111827;">${pincode}</td>
+                  </tr>`
+                      : ""
+                  }
+                  <tr>
+                    <td style="color: #6b7280; font-weight: bold;">WhatsApp Updates</td>
+                    <td style="color: #111827;">${whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="margin-bottom: 30px;">
+                <h3 style="color: #1f2937; font-size: 18px; margin: 0 0 12px 0;">🏗️ Project Snapshot</h3>
+                <table width="100%" cellpadding="8" cellspacing="0" style="border: 1px solid #f3f4f6; border-radius: 8px;">
+                  ${premiumSnapshotRows}
+                </table>
+              </div>
+
+              ${premiumNotesSection}
+
+              ${attachmentNotice}
+
+              <div style="margin-bottom: 25px; background: linear-gradient(135deg, #fbbf24, #f97316); border-radius: 10px; padding: 20px; color: #fff; text-align: center;">
+                <p style="margin: 0; font-size: 16px; font-weight: 600;">⭐ Premium lead alert: This client expects concierge-level guidance.</p>
+              </div>
+
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; text-align: center;">
+                <p style="margin: 0; color: #9ca3af; font-size: 12px;">Submitted on ${timeString} IST</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+  } else {
+    emailSubject = `New Construction Consultation Request - ${
+      formData.projectType || formData.buildingType || "Construction"
+    } - ${formData.name}`;
+    htmlEmail = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -700,13 +847,12 @@ const sendConstructionNotification = async (
 </body>
 </html>
   `.trim();
+  }
 
   try {
     const jobData: Record<string, any> = {
       to: config.adminEmail,
-      subject: `New Construction Consultation Request - ${
-        formData.projectType || formData.buildingType || "Construction"
-      } - ${formData.name}`,
+      subject: emailSubject,
       html: htmlEmail,
     };
 

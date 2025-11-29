@@ -16,7 +16,14 @@ const createProduct = async (data: any, file?: Express.Multer.File) => {
       data.image = uploadResult.secure_url;
     }
 
- 
+    // Convert isTrending from string to boolean if needed
+    if (data.isTrending !== undefined) {
+      if (typeof data.isTrending === "string") {
+        data.isTrending = data.isTrending === "true";
+      }
+    }
+
+    // clean up temp fields
     delete data.imageUrl;
 
     return await productRepository.create(data);
@@ -41,26 +48,44 @@ const updateProduct = async (
   const existingProduct: any = await productRepository.findById(id);
   if (!existingProduct) throw new Error("Product not found");
 
+  const updateData = data ? { ...data } : {};
+
+  // Convert isTrending from string to boolean if needed
+  if (updateData.isTrending !== undefined) {
+    if (typeof updateData.isTrending === "string") {
+      updateData.isTrending = updateData.isTrending === "true";
+    }
+  }
+
   if (file) {
     if (existingProduct.image) {
       await deleteImage(existingProduct.image);
     }
-    const uploadResult: any = await uploadImage(file.buffer, "product-sections");
-    data.image = uploadResult.secure_url;
-  } else if (data.imageUrl && data.imageUrl.startsWith("data:image")) {
+    const uploadResult: any = await uploadImage(
+      file.buffer,
+      "product-sections"
+    );
+    updateData.image = uploadResult.secure_url;
+  } else if (
+    updateData.imageUrl &&
+    typeof updateData.imageUrl === "string" &&
+    updateData.imageUrl.startsWith("data:image")
+  ) {
     if (existingProduct.image) {
       await deleteImage(existingProduct.image);
     }
-    const uploadResult = await cloudinary.uploader.upload(data.imageUrl, {
+    const uploadResult = await cloudinary.uploader.upload(updateData.imageUrl, {
       folder: "product-sections",
       resource_type: "image",
     });
-    data.image = uploadResult.secure_url;
+    updateData.image = uploadResult.secure_url;
   }
 
-  delete data.imageUrl;
+  if (updateData.imageUrl) {
+    delete updateData.imageUrl;
+  }
 
-  return await productRepository.update(id, data);
+  return await productRepository.update(id, updateData);
 };
 /******** delete product*******/
 const deleteProduct = async (id: string) => {
@@ -82,5 +107,5 @@ export default {
   getProductById,
   updateProduct,
   deleteProduct,
-  getTrendingProducts
+  getTrendingProducts,
 };

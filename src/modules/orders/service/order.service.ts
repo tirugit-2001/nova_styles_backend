@@ -91,6 +91,7 @@ const createOrder = async (
     paymentMethod,
     paymentId,
     status: "Processing",
+    orderNumber: `NS-${Date.now()}`,
   };
 
   return await orderRepository.create(orderData, session);
