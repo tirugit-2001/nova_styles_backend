@@ -28,6 +28,10 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Stock cannot be negative"],
     },
+    sold: {
+      type: Number,
+      default: 0,
+    },
     paperTextures: [
       {
         type: String,

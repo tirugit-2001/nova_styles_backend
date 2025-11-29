@@ -66,9 +66,9 @@ const razorpayWebhook = async (req: any, res: any) => {
       session.startTransaction();
       try {
         const paymentData: any = await Payment.findOneAndUpdate(
-          { razorpay_order_id: razorpayOrderId },
+          { razorpayOrderId },
           {
-            razorpay_payment_id: paymentId,
+            razorpayPaymentId: paymentId,
             status: "success",
             amount: amount / 100,
             method: paymentMethod,
@@ -79,7 +79,7 @@ const razorpayWebhook = async (req: any, res: any) => {
         );
 
         const findOrder: any = await orderRepository.findById(paymentData._id);
-        if (findOrder?.status == "processed") {
+        if (findOrder?.status == "Processing") {
           console.log("order successfully");
           return res.status(200).json({ success: true });
         }
@@ -122,7 +122,7 @@ const razorpayWebhook = async (req: any, res: any) => {
       const { id: paymentId, order_id: razorpayOrderId, notes } = paymentEntity;
       const userEmail = notes?.userEmail;
       const existingPayment = await Payment.findOneAndUpdate(
-        { razorpayOrderId },
+    { razorpayOrderId },
         {
           status: "failed",
           error: {
@@ -134,7 +134,14 @@ const razorpayWebhook = async (req: any, res: any) => {
       );
       console.log("Payment failed:", paymentId);
       if (existingPayment) {
-        const order = await orderRepository.findById(razorpayOrderId);
+        const payment = await Payment.findOne(
+          { razorpayOrderId },
+        );
+
+        if (!payment) return;
+
+        const order = await orderRepository.findByPaymentId(payment?._id as string);
+
         if (order) {
           const session = await mongoose.startSession();
           session.startTransaction();
@@ -144,7 +151,7 @@ const razorpayWebhook = async (req: any, res: any) => {
             for (const item of order.items) {
               await Product.findByIdAndUpdate(
                 item.productId,
-                { $inc: { stock: item.quantity } },
+                { $inc: { stock: item.quantity, sold: -item.quantity } },
                 { session }
               );
             }

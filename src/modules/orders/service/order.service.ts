@@ -62,6 +62,7 @@ const createOrder = async (
         throw new Apperror(`Not enough stock for ${product.name}`, 400);
 
       product.stock -= item.quantity;
+      product.sold += item.quantity;
       await product.save({ session });
 
       return {

@@ -16,7 +16,7 @@ const createProduct = async (data: any, file?: Express.Multer.File) => {
       data.image = uploadResult.secure_url;
     }
 
-    // clean up temp fields
+ 
     delete data.imageUrl;
 
     return await productRepository.create(data);
@@ -62,17 +62,18 @@ const updateProduct = async (
 
   return await productRepository.update(id, data);
 };
-
 /******** delete product*******/
 const deleteProduct = async (id: string) => {
   const existingProduct: any = await productRepository.findById(id);
   if (!existingProduct) throw new Error("Product not found");
-
   if (existingProduct.image) {
     await deleteImage(existingProduct.image);
   }
-
   return await productRepository.remove(id);
+};
+/******** get trending products*******/
+const getTrendingProducts = async () => {
+  return await productRepository.findTrending();
 };
 
 export default {
@@ -81,4 +82,5 @@ export default {
   getProductById,
   updateProduct,
   deleteProduct,
+  getTrendingProducts
 };

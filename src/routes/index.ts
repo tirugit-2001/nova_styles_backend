@@ -16,10 +16,7 @@ router.use("/product", productrouter);
 router.use("/cart", cartrouter);
 router.use("/orders", orderrouter);
 router.use("/payments", paymentrouter);
-
 router.use("/heroContent", WebFrontRounter);
-
-
 router.use("/users", userrouter);
 router.use("/content", contentrouter);
 router.use("/portfolioContent", portfoliorouter);

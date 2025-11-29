@@ -91,6 +91,23 @@ const deleteProduct = async (
     next(err);
   }
 };
+/**********get trending products********/
+const getTrendingProducts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const products = await productService.getTrendingProducts();
+    res.status(200).json({
+      success: true,
+      message: "Trending products fetched successfully",
+      products,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
 
 export default {
   createProduct,
@@ -98,4 +115,5 @@ export default {
   getProductById,
   updateProduct,
   deleteProduct,
-};
+  getTrendingProducts
+}
