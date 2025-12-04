@@ -10,7 +10,7 @@ const findAll = async (page: number, limit: number) => {
   const products = await Product.find()
     .skip(skip)
     .limit(limit)
-    .sort({ createdAt: -1 }); // optional: latest firs
+    .sort({ createdAt: -1 });
   const total = await Product.countDocuments();
   return { products, total };
 };

@@ -3,16 +3,54 @@
 import productRepository from "../modules/products/repository/product.repository";
 import Apperror from "./apperror";
 
-// export const calculateCartTotal = async (cart: any) => {
-//   return cart.items.reduce(async (total: number, item: any) => {
-//     const productPrice = await productRepository.findById(item.product);
-//     if (!productPrice) {
-//       throw new Apperror("product price not found", 404);
-//     }
-//     return total + productPrice.price * item.quantity * item.area;
-//   }, 0);
-// };
-export const calculateCartTotal = async (cart: any) => {
+const parsePaperTextures = (value: any) => {
+  if (!value) return [];
+  let parsed: any = value;
+  try {
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(parsed);
+    }
+  } catch (e) {
+    // fallthrough to try array handling below
+  }
+
+  if (Array.isArray(parsed)) {
+    const mapped = parsed
+      .map((item: any) => {
+        if (!item) return null;
+        try {
+          if (typeof item === "string") {
+            item = JSON.parse(item);
+          }
+        } catch (e) {
+          return null;
+        }
+        if (typeof item === "object") {
+          return {
+            name: item.name,
+            rate: item.rate !== undefined ? Number(item.rate) : 0,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+    return mapped;
+  }
+
+  // single object
+  if (typeof parsed === "object") {
+    return [
+      {
+        name: parsed.name,
+        rate: parsed.rate !== undefined ? Number(parsed.rate) : 0,
+      },
+    ];
+  }
+
+  return [];
+};
+
+const calculateCartTotal = async (cart: any) => {
   let total = 0;
   for (const item of cart.items) {
     const product = await productRepository.findById(item.product);
@@ -21,3 +59,4 @@ export const calculateCartTotal = async (cart: any) => {
   }
   return total;
 };
+export { parsePaperTextures, calculateCartTotal };

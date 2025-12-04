@@ -101,7 +101,8 @@ const sendOrderUpdateEmail = async (
 ) => {
   console.log("Attempting to add order update email job for:", userEmail);
 
-  const { orderNumber, status, totalAmount, tracking, customerName, message } = payload;
+  const { orderNumber, status, totalAmount, tracking, customerName, message } =
+    payload;
 
   const trackingHtml = tracking
     ? `
@@ -110,9 +111,15 @@ const sendOrderUpdateEmail = async (
         <li><strong>Location:</strong> ${tracking.location || "N/A"}</li>
         <li><strong>Status:</strong> ${tracking.status || "N/A"}</li>
         <li><strong>Updated At:</strong> ${
-          tracking.updatedAt ? new Date(tracking.updatedAt).toLocaleString() : "N/A"
+          tracking.updatedAt
+            ? new Date(tracking.updatedAt).toLocaleString()
+            : "N/A"
         }</li>
-        ${tracking.notes ? `<li><strong>Notes:</strong> ${tracking.notes}</li>` : ""}
+        ${
+          tracking.notes
+            ? `<li><strong>Notes:</strong> ${tracking.notes}</li>`
+            : ""
+        }
       </ul>
     `
     : "<p>No tracking updates are available yet.</p>";
@@ -140,4 +147,8 @@ const sendOrderUpdateEmail = async (
     `,
   });
 };
-export { sendPaymentSuccessEmail, sendPaymentFailedEmail, sendOrderUpdateEmail };
+export {
+  sendPaymentSuccessEmail,
+  sendPaymentFailedEmail,
+  sendOrderUpdateEmail,
+};

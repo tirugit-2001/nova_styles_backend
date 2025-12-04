@@ -6,9 +6,6 @@ const connection = {
   host: config.redis_host,
   port: Number(config.redis_port),
   password: config.redis_password,
-  //   tls: {
-  //     rejectUnauthorized: false, // allow secure connection
-  //   },
 };
 
 const transporter = nodemailer.createTransport({
@@ -25,21 +22,19 @@ const emailWorker = new Worker(
   "emailQueue",
   async (job) => {
     const { to, subject, html } = job.data;
-
     await transporter.sendMail({
       from: config.smtp_user,
       to,
       subject,
       html,
     });
-
-    console.log(`✅ Email sent to ${to}`);
+    console.log(`Email sent to ${to}`);
   },
   { connection }
 );
 
 emailWorker.on("failed", (job, err) => {
-  console.error(`❌ Job ${job?.id} failed`, err);
+  console.error(`Job ${job?.id} failed`, err);
 });
 
-console.log("🚀 Email Worker Running...");
+console.log("Email Worker Running...");
