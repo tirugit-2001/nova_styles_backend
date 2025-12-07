@@ -55,7 +55,13 @@ const calculateCartTotal = async (cart: any) => {
   for (const item of cart.items) {
     const product = await productRepository.findById(item.product);
     if (!product) throw new Apperror("Product price not found", 404);
-    total += product.price * item.quantity * (item.area || 1);
+    const texture = product.paperTextures?.find(
+      (tex: any) => tex.name === item.selectedTexture
+    );
+    if (texture) {
+      total += texture.rate * item.quantity * (item.area || 1);
+      continue;
+    }
   }
   return total;
 };

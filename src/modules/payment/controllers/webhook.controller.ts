@@ -14,6 +14,7 @@ import {
 
 const RAZORPAY_WEBHOOK_SECRET: any = process.env.RAZORPAY_WEBHOOK_SECRET;
 const razorpayWebhook = async (req: any, res: any) => {
+  console.log("webhoookkkkk called");
   try {
     const signature = req.headers["x-razorpay-signature"];
     const payload = JSON.stringify(req.body);
@@ -122,7 +123,7 @@ const razorpayWebhook = async (req: any, res: any) => {
       const { id: paymentId, order_id: razorpayOrderId, notes } = paymentEntity;
       const userEmail = notes?.userEmail;
       const existingPayment = await Payment.findOneAndUpdate(
-    { razorpayOrderId },
+        { razorpayOrderId },
         {
           status: "failed",
           error: {
@@ -134,13 +135,13 @@ const razorpayWebhook = async (req: any, res: any) => {
       );
       console.log("Payment failed:", paymentId);
       if (existingPayment) {
-        const payment = await Payment.findOne(
-          { razorpayOrderId },
+        const payment = await Payment.findOne({ razorpayOrderId });
+
+        if (!payment) return res.status(400).json({ success: false });
+
+        const order = await orderRepository.findByPaymentId(
+          payment?._id as string
         );
-
-        if (!payment) return;
-
-        const order = await orderRepository.findByPaymentId(payment?._id as string);
 
         if (order) {
           const session = await mongoose.startSession();
@@ -177,4 +178,4 @@ const razorpayWebhook = async (req: any, res: any) => {
   }
 };
 
-export default { razorpayWebhook };
+export default razorpayWebhook;

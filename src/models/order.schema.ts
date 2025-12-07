@@ -11,6 +11,8 @@ const orderItemSchema = new Schema<IOrderItem>(
     area: Number,
     selectedColor: String,
     selectedTexture: String,
+    height: Number,
+    width: Number,
   },
   { _id: false }
 );

@@ -17,6 +17,8 @@ const cartSchema = new Schema<ICart>(
         area: { type: Number },
         name: { type: String },
         image: { type: String },
+        height: { type: Number },
+        width: { type: Number },
       },
     ],
   },

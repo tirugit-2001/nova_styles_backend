@@ -30,7 +30,6 @@ router.delete("/:productId", cartController.removeFromCart);
  *   put:
  *     summary: Update item quantity
  */
-router.put("/update", cartController.updateQuantity);
 
 /**
  * @openapi

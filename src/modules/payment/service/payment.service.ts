@@ -7,6 +7,7 @@ import Apperror from "../../../utils/apperror";
 import productRepository from "../../products/repository/product.repository";
 import cartRepository from "../../cart/repository/cart.repository";
 import { sendPaymentSuccessEmail } from "../../../helpers/sendemail";
+import { height } from "pdfkit/js/page";
 /********create payment order**********/
 const createPaymentOrder = async (
   userId: string,
@@ -24,31 +25,43 @@ const createPaymentOrder = async (
     for (const item of items) {
       const product = await productRepository.findById(item._id, session);
       if (!product) throw new Apperror("Product not found", 404);
-
+      console.log(product);
+      console.log(item);
       if (product.stock < item.quantity) {
         throw new Apperror(
           `Only ${product.stock} items left in stock for ${product.name}`,
           400
         );
       }
-
+      const texture: any = product.paperTextures.find((texture) => {
+        return texture.name === item.selectedTexture;
+      });
+      console.log("texture", texture);
+      if (texture.rate !== item.price) {
+        throw new Apperror(
+          `Price mismatch for texture ${item.selectedTexture} of product ${product.name}`,
+          400
+        );
+      }
       products.push({
         _id: item._id,
-        price: product.price,
+        price: texture.rate,
         quantity: item.quantity,
         area: item.area,
         selectedColor: item.selectedColor,
         selectedTexture: item.selectedTexture,
         image: item.image,
         name: product.name,
+        height: item.height,
+        width: item.width,
       });
     }
 
-    const amount = products.reduce(
-      (sum, item) =>
-        sum + item.price * item.quantity * (item.area == 0 ? 1 : item.area),
-      0
-    );
+    const amount = products.reduce((sum, item) => {
+      return (
+        sum + item.price * item.quantity * (item.area <= 30 ? 30 : item.area)
+      );
+    }, 0);
 
     const options = {
       amount: amount * 100,

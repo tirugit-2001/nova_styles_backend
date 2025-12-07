@@ -29,7 +29,10 @@ const loginUser = async (
   password: string,
   deviceId: string
 ): Promise<any> => {
+  console.log(email, password, deviceId);
   const existingUser = await userRepository.findByEmail(email);
+  console.log("exisingUser", existingUser);
+  console.log(existingUser);
   if (!existingUser) {
     throw new Apperror("User doesnot existed.", 404);
   }
@@ -139,7 +142,10 @@ const changePassword = async (
   }
 
   // Verify current password
-  const isPasswordValid = comparePassword(currentPassword, existingUser.password);
+  const isPasswordValid = comparePassword(
+    currentPassword,
+    existingUser.password
+  );
   if (!isPasswordValid) {
     throw new Apperror("Current password is incorrect", 401);
   }
