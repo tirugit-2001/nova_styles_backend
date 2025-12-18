@@ -1,12 +1,12 @@
 import { deleteImage, uploadImage } from "../../../config/cloudinary";
 import Apperror from "../../../utils/apperror";
 import contentRepository from "../repository/content.repository";
-import { emailQueue } from "../../../queues/email.queue";
 import config from "../../../config/config";
 import InteriorEstimation from "../../../models/InteriorEstimation.schema";
 import ConstructionEstimation from "../../../models/ConstructionEstimation.schema";
 import fs from "fs";
 import path from "path";
+import { sendEmail } from "../../../helpers/sendemail";
 
 const escapeHtml = (text?: string) => {
   if (!text) return "";
@@ -94,13 +94,6 @@ const sendInteriorDesignNotification = async (
   formData: any,
   attachment?: Express.Multer.File
 ) => {
-  if (!emailQueue) {
-    console.warn(
-      "⚠️  Email queue is not available (Redis not running). Email will not be sent."
-    );
-    throw new Apperror("Email service is currently unavailable", 503);
-  }
-
   if (!config.adminEmail) {
     throw new Apperror("Admin email is not configured", 500);
   }
@@ -125,7 +118,9 @@ const sendInteriorDesignNotification = async (
     }).format(price);
   };
 
-  const isCustomizedInterior = formData.interiorType === "customized interior" || formData.interiorType === "customised-premium";
+  const isCustomizedInterior =
+    formData.interiorType === "customized interior" ||
+    formData.interiorType === "customised-premium";
   const packagePrice = formData.packagePrice || 0;
   const addonsTotal = formData.addonsTotal || 0;
   const totalPrice = formData.totalPrice || 0;
@@ -133,16 +128,11 @@ const sendInteriorDesignNotification = async (
   // Format addons list if any
   const addonsList =
     formData.addons && formData.addons.length > 0
-      ? formData.addons
-          .map((addon: string) => `<li>${addon}</li>`)
-          .join("")
+      ? formData.addons.map((addon: string) => `<li>${addon}</li>`).join("")
       : "<li>None selected</li>";
 
   const clientNotes =
-    formData.message ||
-    formData.suggestions ||
-    formData.additionalNotes ||
-    "";
+    formData.message || formData.suggestions || formData.additionalNotes || "";
 
   const attachmentNotice = attachment
     ? `<div style="margin-bottom: 25px; background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 6px;">
@@ -187,17 +177,23 @@ const sendInteriorDesignNotification = async (
           <tr>
             <td style="padding: 30px 20px;">
               <!-- Special Message Section - Prominently Displayed -->
-              ${formData.message ? `
+              ${
+                formData.message
+                  ? `
               <div style="margin-bottom: 30px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 5px solid #f59e0b; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);">
                 <div style="display: flex; align-items: center; margin-bottom: 15px;">
                   <span style="font-size: 24px; margin-right: 10px;">💬</span>
                   <h2 style="color: #92400e; font-size: 22px; margin: 0; font-weight: bold;">Client's Custom Requirements</h2>
                 </div>
                 <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; border: 2px solid #f59e0b; margin-top: 15px;">
-                  <p style="margin: 0; color: #333333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${formatMessage(formData.message)}</p>
+                  <p style="margin: 0; color: #333333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${formatMessage(
+                    formData.message
+                  )}</p>
                 </div>
               </div>
-              ` : ""}
+              `
+                  : ""
+              }
 
               <!-- Interior Type Badge -->
               <div style="margin-bottom: 30px; text-align: center;">
@@ -212,25 +208,41 @@ const sendInteriorDesignNotification = async (
                 <table width="100%" cellpadding="10" cellspacing="0">
                   <tr>
                     <td style="color: #666666; font-weight: bold; width: 40%; font-size: 15px;">Name:</td>
-                    <td style="color: #333333; font-size: 16px; font-weight: 600;">${formData.name}</td>
+                    <td style="color: #333333; font-size: 16px; font-weight: 600;">${
+                      formData.name
+                    }</td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Email:</td>
-                    <td style="color: #333333;"><a href="mailto:${formData.email}" style="color: #d97706; text-decoration: none; font-weight: 600;">${formData.email}</a></td>
+                    <td style="color: #333333;"><a href="mailto:${
+                      formData.email
+                    }" style="color: #d97706; text-decoration: none; font-weight: 600;">${
+      formData.email
+    }</a></td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Mobile:</td>
-                    <td style="color: #333333;"><a href="tel:${formData.mobile}" style="color: #d97706; text-decoration: none; font-weight: 600; font-size: 16px;">${formData.mobile}</a></td>
+                    <td style="color: #333333;"><a href="tel:${
+                      formData.mobile
+                    }" style="color: #d97706; text-decoration: none; font-weight: 600; font-size: 16px;">${
+      formData.mobile
+    }</a></td>
                   </tr>
-                  ${formData.pincode ? `
+                  ${
+                    formData.pincode
+                      ? `
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Pincode:</td>
                     <td style="color: #333333; font-size: 16px;">${formData.pincode}</td>
                   </tr>
-                  ` : ""}
+                  `
+                      : ""
+                  }
                   <tr>
                     <td style="color: #666666; font-weight: bold;">WhatsApp Updates:</td>
-                    <td style="color: #333333; font-size: 16px;">${formData.whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                    <td style="color: #333333; font-size: 16px;">${
+                      formData.whatsappUpdates ? "✅ Yes" : "❌ No"
+                    }</td>
                   </tr>
                 </table>
               </div>
@@ -270,7 +282,9 @@ const sendInteriorDesignNotification = async (
     `.trim();
   } else {
     // Modular Interior Email Template (Existing)
-    emailSubject = `New Modular Interior Design Request - ${formData.floorplan || "N/A"} - ${formData.name}`;
+    emailSubject = `New Modular Interior Design Request - ${
+      formData.floorplan || "N/A"
+    } - ${formData.name}`;
     htmlEmail = `
 <!DOCTYPE html>
 <html>
@@ -299,14 +313,20 @@ const sendInteriorDesignNotification = async (
                 <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
                     <td style="color: #666666; font-weight: bold; width: 40%;">Floorplan:</td>
-                    <td style="color: #333333;">${formData.floorplan || "N/A"}</td>
+                    <td style="color: #333333;">${
+                      formData.floorplan || "N/A"
+                    }</td>
                   </tr>
-                  ${formData.purpose ? `
+                  ${
+                    formData.purpose
+                      ? `
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Purpose:</td>
                     <td style="color: #333333;">${formData.purpose}</td>
                   </tr>
-                  ` : ""}
+                  `
+                      : ""
+                  }
                 </table>
               </div>
 
@@ -326,7 +346,9 @@ const sendInteriorDesignNotification = async (
               </div>
 
               <!-- Selected Add-ons Section -->
-              ${formData.addons && formData.addons.length > 0 ? `
+              ${
+                formData.addons && formData.addons.length > 0
+                  ? `
               <div style="margin-bottom: 30px;">
                 <h2 style="color: #333333; font-size: 20px; margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #667eea;">🔧 Selected Add-ons</h2>
                 <ul style="margin: 0 0 15px 0; padding-left: 20px; color: #333333;">
@@ -334,30 +356,48 @@ const sendInteriorDesignNotification = async (
                 </ul>
                 <div style="text-align: right; padding-top: 10px; border-top: 1px solid #e0e0e0;">
                   <span style="color: #666666; font-weight: bold;">Add-ons Total: </span>
-                  <span style="color: #333333; font-weight: bold; font-size: 16px;">${formatPrice(addonsTotal)}</span>
+                  <span style="color: #333333; font-weight: bold; font-size: 16px;">${formatPrice(
+                    addonsTotal
+                  )}</span>
                 </div>
               </div>
-              ` : ""}
+              `
+                  : ""
+              }
 
               <!-- Total Estimation Section -->
               <div style="margin-bottom: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 8px;">
                 <h2 style="color: #ffffff; font-size: 22px; margin: 0 0 20px 0; text-align: center;">💰 Total Estimated Cost</h2>
                 <table width="100%" cellpadding="10" cellspacing="0" style="background-color: rgba(255, 255, 255, 0.1); border-radius: 6px;">
-                  ${packagePrice > 0 ? `
+                  ${
+                    packagePrice > 0
+                      ? `
                   <tr>
                     <td style="color: #ffffff; font-size: 15px; padding: 8px;">Package:</td>
-                    <td style="color: #ffffff; font-size: 15px; font-weight: bold; text-align: right; padding: 8px;">${formatPrice(packagePrice)}</td>
+                    <td style="color: #ffffff; font-size: 15px; font-weight: bold; text-align: right; padding: 8px;">${formatPrice(
+                      packagePrice
+                    )}</td>
                   </tr>
-                  ` : ""}
-                  ${addonsTotal > 0 ? `
+                  `
+                      : ""
+                  }
+                  ${
+                    addonsTotal > 0
+                      ? `
                   <tr>
                     <td style="color: #ffffff; font-size: 15px; padding: 8px;">Add-ons:</td>
-                    <td style="color: #ffffff; font-size: 15px; font-weight: bold; text-align: right; padding: 8px;">${formatPrice(addonsTotal)}</td>
+                    <td style="color: #ffffff; font-size: 15px; font-weight: bold; text-align: right; padding: 8px;">${formatPrice(
+                      addonsTotal
+                    )}</td>
                   </tr>
-                  ` : ""}
+                  `
+                      : ""
+                  }
                   <tr style="border-top: 2px solid rgba(255, 255, 255, 0.3);">
                     <td style="color: #ffffff; font-size: 18px; font-weight: bold; padding: 12px 8px;">Total:</td>
-                    <td style="color: #ffffff; font-size: 24px; font-weight: bold; text-align: right; padding: 12px 8px;">${formatPrice(totalPrice)}</td>
+                    <td style="color: #ffffff; font-size: 24px; font-weight: bold; text-align: right; padding: 12px 8px;">${formatPrice(
+                      totalPrice
+                    )}</td>
                   </tr>
                 </table>
                 <p style="margin: 15px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 12px; text-align: center; font-style: italic;">
@@ -375,21 +415,35 @@ const sendInteriorDesignNotification = async (
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Email:</td>
-                    <td style="color: #333333;"><a href="mailto:${formData.email}" style="color: #667eea; text-decoration: none;">${formData.email}</a></td>
+                    <td style="color: #333333;"><a href="mailto:${
+                      formData.email
+                    }" style="color: #667eea; text-decoration: none;">${
+      formData.email
+    }</a></td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Mobile:</td>
-                    <td style="color: #333333;"><a href="tel:${formData.mobile}" style="color: #667eea; text-decoration: none;">${formData.mobile}</a></td>
+                    <td style="color: #333333;"><a href="tel:${
+                      formData.mobile
+                    }" style="color: #667eea; text-decoration: none;">${
+      formData.mobile
+    }</a></td>
                   </tr>
-                  ${formData.pincode ? `
+                  ${
+                    formData.pincode
+                      ? `
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Pincode:</td>
                     <td style="color: #333333;">${formData.pincode}</td>
                   </tr>
-                  ` : ""}
+                  `
+                      : ""
+                  }
                   <tr>
                     <td style="color: #666666; font-weight: bold;">WhatsApp Updates:</td>
-                    <td style="color: #333333;">${formData.whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                    <td style="color: #333333;">${
+                      formData.whatsappUpdates ? "✅ Yes" : "❌ No"
+                    }</td>
                   </tr>
                 </table>
               </div>
@@ -400,7 +454,9 @@ const sendInteriorDesignNotification = async (
               <!-- Message Section (if provided) -->
               <div style="margin-bottom: 30px; background-color: #f8f9fa; padding: 20px; border-radius: 6px; border-left: 4px solid #667eea;">
                 <h2 style="color: #333333; font-size: 18px; margin: 0 0 10px 0;">💬 Additional Message:</h2>
-                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${formatMessage(clientNotes)}</p>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${formatMessage(
+                  clientNotes
+                )}</p>
               </div>
               `
                   : ""
@@ -435,14 +491,14 @@ const sendInteriorDesignNotification = async (
   }
 
   try {
-    const jobData: Record<string, any> = {
+    const mailData: Record<string, any> = {
       to: config.adminEmail,
       subject: emailSubject,
       html: htmlEmail,
     };
 
     if (attachment) {
-      jobData.attachments = [
+      mailData.attachments = [
         {
           filename: attachment.originalname || "project-brief.pdf",
           content: attachment.buffer,
@@ -451,9 +507,9 @@ const sendInteriorDesignNotification = async (
       ];
     }
 
-    const job = await emailQueue.add("interiorDesignNotification", jobData);
+    await sendEmail(mailData);
 
-    console.log("✅ Interior design notification email job added successfully:", job.id);
+    console.log("✅ Interior design notification email sent successfully");
 
     // Save to database after successfully queuing email
     try {
@@ -501,13 +557,16 @@ const sendInteriorDesignNotification = async (
         console.log("✅ Interior estimation saved to database");
       }
     } catch (dbError) {
-      // Log error but don't fail the request - email was already queued
+      // Log error but don't fail the request - email was already sent
       console.error("❌ Error saving interior estimation to database:", dbError);
     }
 
-    return job;
+    return true;
   } catch (error) {
-    console.error("❌ Error adding interior design notification email job:", error);
+    console.error(
+      "❌ Error sending interior design notification email:",
+      error
+    );
     throw error;
   }
 };
@@ -516,13 +575,6 @@ const sendConstructionNotification = async (
   formData: any,
   attachment?: Express.Multer.File
 ) => {
-  if (!emailQueue) {
-    console.warn(
-      "⚠️  Email queue is not available (Redis not running). Email will not be sent."
-    );
-    throw new Apperror("Email service is currently unavailable", 503);
-  }
-
   if (!config.adminEmail) {
     throw new Apperror("Admin email is not configured", 500);
   }
@@ -585,7 +637,9 @@ const sendConstructionNotification = async (
       formData.ratePerSqft
         ? `<tr>
             <td style="color: #666666; font-weight: bold; width: 40%;">Rate / sq ft:</td>
-            <td style="color: #333333;">${formatPrice(formData.ratePerSqft)}</td>
+            <td style="color: #333333;">${formatPrice(
+              formData.ratePerSqft
+            )}</td>
           </tr>`
         : "",
     ]
@@ -633,7 +687,9 @@ const sendConstructionNotification = async (
   const attachmentNotice = attachment
     ? `<div style="margin-bottom: 25px; background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 6px;">
         <p style="margin: 0; color: #065f46; font-size: 14px;">
-          📎 Client uploaded a project brief (PDF): <strong>${attachment.originalname || "project-brief.pdf"}</strong>
+          📎 Client uploaded a project brief (PDF): <strong>${
+            attachment.originalname || "project-brief.pdf"
+          }</strong>
         </p>
       </div>`
     : "";
@@ -649,7 +705,9 @@ const sendConstructionNotification = async (
       typeof sqft === "number" && sqft > 0
         ? `<tr>
             <td style="color: #666666; font-weight: bold;">Approx. Size:</td>
-            <td style="color: #333333;">${sqft.toLocaleString("en-IN")} sq.ft</td>
+            <td style="color: #333333;">${sqft.toLocaleString(
+              "en-IN"
+            )} sq.ft</td>
           </tr>`
         : "",
       selectedPackage
@@ -667,7 +725,9 @@ const sendConstructionNotification = async (
       typeof estimatedPrice === "number" && estimatedPrice > 0
         ? `<tr>
             <td style="color: #666666; font-weight: bold;">Budget Estimate:</td>
-            <td style="color: #333333; font-weight: 600;">${formatPrice(estimatedPrice)}</td>
+            <td style="color: #333333; font-weight: 600;">${formatPrice(
+              estimatedPrice
+            )}</td>
           </tr>`
         : "",
     ]
@@ -746,7 +806,9 @@ const sendConstructionNotification = async (
                   }
                   <tr>
                     <td style="color: #6b7280; font-weight: bold;">WhatsApp Updates</td>
-                    <td style="color: #111827;">${whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                    <td style="color: #111827;">${
+                      whatsappUpdates ? "✅ Yes" : "❌ No"
+                    }</td>
                   </tr>
                 </table>
               </div>
@@ -846,15 +908,21 @@ const sendConstructionNotification = async (
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Built-up Area:</td>
-                    <td style="color: #333333;">${sqft?.toLocaleString("en-IN")} sq.ft</td>
+                    <td style="color: #333333;">${sqft?.toLocaleString(
+                      "en-IN"
+                    )} sq.ft</td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Rate / Sq.ft:</td>
-                    <td style="color: #333333;">${formatPrice(ratePerSqft || 0)}</td>
+                    <td style="color: #333333;">${formatPrice(
+                      ratePerSqft || 0
+                    )}</td>
                   </tr>
                   <tr>
                     <td style="color: #666666; font-weight: bold;">Estimated Cost:</td>
-                    <td style="color: #333333; font-weight: bold;">${formatPrice(estimatedPrice || 0)}</td>
+                    <td style="color: #333333; font-weight: bold;">${formatPrice(
+                      estimatedPrice || 0
+                    )}</td>
                   </tr>
                 </table>
               </div>
@@ -887,7 +955,9 @@ const sendConstructionNotification = async (
                   }
                   <tr>
                     <td style="color: #666666; font-weight: bold;">WhatsApp Updates:</td>
-                    <td style="color: #333333;">${whatsappUpdates ? "✅ Yes" : "❌ No"}</td>
+                    <td style="color: #333333;">${
+                      whatsappUpdates ? "✅ Yes" : "❌ No"
+                    }</td>
                   </tr>
                 </table>
               </div>
@@ -931,14 +1001,14 @@ const sendConstructionNotification = async (
   }
 
   try {
-    const jobData: Record<string, any> = {
+    const mailData: Record<string, any> = {
       to: config.adminEmail,
       subject: emailSubject,
       html: htmlEmail,
     };
 
     if (attachment) {
-      jobData.attachments = [
+      mailData.attachments = [
         {
           filename: attachment.originalname || "project-brief.pdf",
           content: attachment.buffer,
@@ -947,9 +1017,9 @@ const sendConstructionNotification = async (
       ];
     }
 
-    const job = await emailQueue.add("constructionNotification", jobData);
+    await sendEmail(mailData);
 
-    console.log("✅ Construction notification email job added successfully:", job.id);
+    console.log("✅ Construction notification email sent successfully");
 
     // Save to database after successfully queuing email
     try {
@@ -1006,9 +1076,9 @@ const sendConstructionNotification = async (
       console.error("❌ Error saving construction estimation to database:", dbError);
     }
 
-    return job;
+    return true;
   } catch (error) {
-    console.error("❌ Error adding construction notification email job:", error);
+    console.error("❌ Error sending construction notification email:", error);
     throw error;
   }
 };

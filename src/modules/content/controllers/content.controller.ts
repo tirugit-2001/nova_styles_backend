@@ -136,15 +136,15 @@ const postContactForm = async (
     const validatedData = validate(interiorFormSchema, req.body);
 
     // Send email notification to admin
-    const job = await contentService.sendInteriorDesignNotification(
+    await contentService.sendInteriorDesignNotification(
       validatedData,
       req.file ?? undefined
     );
 
     res.status(200).json({
       success: true,
-      message: "Form submitted successfully. Our team will contact you shortly.",
-      jobId: job?.id,
+      message:
+        "Form submitted successfully. Our team will contact you shortly.",
     });
   } catch (err) {
     console.error("Contact form validation error:", err);
@@ -178,8 +178,8 @@ const postConstructionForm = async (
 
     res.status(200).json({
       success: true,
-      message: "Form submitted successfully. Our team will contact you shortly.",
-      jobId: job?.id,
+      message:
+        "Form submitted successfully. Our team will contact you shortly.",
     });
   } catch (err) {
     next(err);

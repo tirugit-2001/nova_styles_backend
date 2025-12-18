@@ -24,6 +24,8 @@ interface ICartItem {
   selectedTexture: string; // selected texture
   image: string;
   name: string;
+  height: number;
+  width: number;
   _id?: string;
 }
 
@@ -63,6 +65,8 @@ interface IOrderItem {
   area: number;
   selectedColor: string;
   selectedTexture: string;
+  height: number;
+  width: number;
 }
 
 interface IOrder extends Document {
@@ -72,7 +76,14 @@ interface IOrder extends Document {
   totalAmount: number;
   paymentMethod: "COD" | "Online" | "cash";
   paymentId?: mongoose.Types.ObjectId;
-  status: "Pending" | "Processing" | "Shipped" | "Out for Delivery" | "Delivered" | "Completed" | "Cancelled";
+  status:
+    | "Pending"
+    | "Processing"
+    | "Shipped"
+    | "Out for Delivery"
+    | "Delivered"
+    | "Completed"
+    | "Cancelled";
   orderNumber: string;
   invoiceNumber?: string;
   invoiceGenerated: boolean;

@@ -60,7 +60,21 @@ const createOrder = async (
       if (!product) throw new Apperror("Product not found", 404);
       if (product.stock < item.quantity)
         throw new Apperror(`Not enough stock for ${product.name}`, 400);
-
+      const texture: any = product.paperTextures.find((texture) => {
+        return texture.name === item.selectedTexture;
+      });
+      if (!texture) {
+        throw new Apperror(
+          `Texture ${item.selectedTexture} not found for product ${product.name}`,
+          400
+        );
+      }
+      if (texture.rate !== item.price) {
+        throw new Apperror(
+          `Price mismatch for texture ${item.selectedTexture} of product ${product.name}`,
+          400
+        );
+      }
       product.stock -= item.quantity;
       product.sold += item.quantity;
       await product.save({ session });
@@ -69,17 +83,19 @@ const createOrder = async (
         productId: product._id,
         name: product.name,
         image: product.image,
-        price: product.price,
+        price: texture.rate,
         quantity: item.quantity,
         selectedTexture: item.selectedTexture,
         selectedColor: item.selectedColor,
         area: item.area,
+        height: item.height,
+        width: item.width,
       };
     })
   );
 
   const totalAmount = productDetails.reduce(
-    (sum, i) => sum + i.price * i.quantity * (i.area == 0 ? 1 : i.area),
+    (sum, i) => sum + i.price * i.quantity * (i.area <= 30 ? 30 : i.area),
     0
   );
 

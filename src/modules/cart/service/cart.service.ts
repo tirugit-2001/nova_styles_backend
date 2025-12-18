@@ -4,6 +4,7 @@ import { calculateCartTotal } from "../../../utils/helper";
 import productRepository from "../../products/repository/product.repository";
 import cartRepository from "../repository/cart.repository";
 import Product from "../../../models/product.schema";
+import { height } from "pdfkit/js/page";
 
 /****** Add to Cart ******/
 const addToCart = async (
@@ -14,9 +15,13 @@ const addToCart = async (
   selectedTexture: string,
   name: string,
   image: string,
-  userId: string
+  userId: string,
+  height: number,
+  width: number
 ) => {
   if (
+    !height ||
+    !width ||
     !productId ||
     !quantity ||
     quantity <= 0 ||
@@ -35,7 +40,14 @@ const addToCart = async (
     if (!product) throw new Apperror("Product not found", 404);
     if (product.stock < quantity)
       throw new Apperror(`Only ${product.stock} items left in stock`, 400);
-
+    const textureName = product.paperTextures.find(
+      (tex: any) => tex.name === selectedTexture
+    );
+    if (!textureName)
+      throw new Apperror(
+        "Selected texture not available for this product",
+        400
+      );
     let cart = await cartRepository.findOne(userId, session);
 
     if (!cart) {
@@ -50,6 +62,8 @@ const addToCart = async (
               selectedColor,
               selectedTexture,
               name,
+              height,
+              width,
               image,
             },
           ],
@@ -77,6 +91,8 @@ const addToCart = async (
         selectedTexture,
         name,
         image,
+        height,
+        width,
       });
     }
 
@@ -92,6 +108,10 @@ const addToCart = async (
     // Transform cart items into frontend-ready format
     const formattedItems = cart.items.map((item) => {
       const productData = productMap.get(item.product._id.toString());
+      const texture = productData.paperTextures?.find(
+        (tex: any) => tex.name === item.selectedTexture
+      );
+      if (!texture) throw new Apperror("Selected texture not found", 404);
       if (!productData) throw new Error("Product not found");
       return {
         productId: item.product._id.toString(),
@@ -100,11 +120,13 @@ const addToCart = async (
           _id: productData._id.toString(),
           name: productData.name,
           image: productData.image,
-          price: productData.price,
+          price: texture.rate,
           area: item.area,
           selectedColor: item.selectedColor,
           selectedTexture: item.selectedTexture,
           quantity: item.quantity,
+          height: item.height,
+          width: item.width,
         },
       };
     });
@@ -133,8 +155,12 @@ const getCart = async (userId: string) => {
   products.forEach((p) => productMap.set(p._id.toString(), p));
   const formattedItems = cart.items.map((item) => {
     const productData = productMap.get(item.product._id.toString());
-    console.log(productData);
     if (!productData) throw new Apperror("Product not found", 404);
+
+    const texture = productData.paperTextures?.find(
+      (tex: any) => tex.name === item.selectedTexture
+    );
+    if (!texture) throw new Apperror("Selected texture not found", 404);
     return {
       productId: item.product._id.toString(),
       quantity: item.quantity,
@@ -143,19 +169,20 @@ const getCart = async (userId: string) => {
         _id: productData._id.toString(),
         name: productData.name,
         image: productData.image,
-        price: productData.price,
+        price: texture.rate,
         area: item.area,
         selectedColor: item.selectedColor,
         selectedTexture: item.selectedTexture,
         quantity: item.quantity,
+        height: item.height,
+        width: item.width,
       },
     };
   });
-  const totalPrice = formattedItems.reduce(
-    (sum, i) =>
-      sum + (i.product?.price || 0) * i.quantity * (i.product?.area || 1),
-    0
-  );
+  const totalPrice = formattedItems.reduce((sum, i) => {
+    if (!i.isAvailable) return sum;
+    return sum + (i.product?.price || 0) * i.quantity * (i.product?.area || 1);
+  }, 0);
   return { items: formattedItems, totalPrice };
 };
 
@@ -186,7 +213,10 @@ const removeFromCart = async (productId: string, userId: string) => {
     const formattedItems = cart.items.map((item) => {
       const productData = productMap.get(item.product._id.toString());
       if (!productData) throw new Error("Product not found");
-
+      const texture = productData.paperTextures?.find(
+        (tex: any) => tex.name === item.selectedTexture
+      );
+      if (!texture) throw new Apperror("Selected texture not found", 404);
       return {
         productId: item.product._id.toString(),
         quantity: item.quantity,
@@ -194,11 +224,13 @@ const removeFromCart = async (productId: string, userId: string) => {
           _id: productData._id.toString(),
           name: productData.name,
           image: productData.image,
-          price: productData.price,
+          price: texture.rate,
           area: item.area,
           selectedColor: item.selectedColor,
           selectedTexture: item.selectedTexture,
           quantity: item.quantity,
+          height: item.height,
+          width: item.width,
         },
       };
     });
@@ -244,6 +276,10 @@ const mergeCart = async (guestCart: any, userId: string) => {
         if (guestItem.quantity > product.stock)
           throw new Apperror(`Only ${product.stock} items left in stock`, 400);
       }
+      const texture = product.paperTextures?.find(
+        (tex: any) => tex.name === guestItem.product.selectedTexture
+      );
+      if (!texture) throw new Apperror("Selected texture not found", 404);
       cart.items.push({
         product: guestItem.productId,
         quantity: guestItem.quantity,
@@ -252,6 +288,8 @@ const mergeCart = async (guestCart: any, userId: string) => {
         selectedTexture: guestItem.product.selectedTexture,
         name: guestItem.product.name,
         image: guestItem.product.image,
+        height: guestItem.product.height,
+        width: guestItem.product.width,
       });
     }
 
@@ -268,6 +306,10 @@ const mergeCart = async (guestCart: any, userId: string) => {
     const formattedItems = cart.items.map((item) => {
       const productData = productMap.get(item.product._id.toString());
       if (!productData) throw new Error("Product not found");
+      const texture = productData.paperTextures?.find(
+        (tex: any) => tex.name === item.selectedTexture
+      );
+      if (!texture) throw new Apperror("Selected texture not found", 404);
       return {
         productId: item.product._id.toString(),
         quantity: item.quantity,
@@ -275,11 +317,13 @@ const mergeCart = async (guestCart: any, userId: string) => {
           _id: productData._id.toString(),
           name: productData.name,
           image: productData.image,
-          price: productData.price,
+          price: texture.rate,
           area: item.area,
           selectedColor: item.selectedColor,
           selectedTexture: item.selectedTexture,
           quantity: item.quantity,
+          height: item.height,
+          width: item.width,
         },
       };
     });
@@ -294,51 +338,9 @@ const mergeCart = async (guestCart: any, userId: string) => {
   }
 };
 
-/***** Update Quantity (+/-) ******/
-const updateQuantity = async (
-  productId: string,
-  quantity: number,
-  userId: string
-) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const cart = await cartRepository.findOne(userId, session);
-    if (!cart) throw new Apperror("Cart not found", 404);
-
-    const item = cart.items.find(
-      (i) => i.product._id?.toString() === productId
-    );
-    if (!item) throw new Apperror("Item not found in cart", 404);
-    if (quantity < 1) throw new Apperror("Quantity must be at least 1", 400);
-
-    const product = await productRepository.findById(productId);
-    if (!product) throw new Apperror("Product not found", 404);
-    if (product.stock < quantity)
-      throw new Apperror(`Only ${product.stock} items left in stock`, 400);
-
-    item.quantity = quantity;
-
-    await cartRepository.save(cart, session); // save inside transaction
-    await session.commitTransaction();
-    session.endSession();
-
-    await cart.populate("items.product");
-    const totalPrice = calculateCartTotal(cart);
-
-    return { ...cart.toObject(), totalPrice };
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
-  }
-};
-
 export default {
   addToCart,
   getCart,
   removeFromCart,
-  updateQuantity,
   mergeCart,
 };

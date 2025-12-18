@@ -10,11 +10,11 @@ const productSchema = new mongoose.Schema(
       minlength: [3, "Product name must be at least 3 characters"],
       maxlength: [100, "Product name cannot exceed 100 characters"],
     },
-    price: {
-      type: Number,
-      required: [true, "Product price is required"],
-      min: [0, "Price cannot be negative"],
-    },
+    // price: {
+    //   type: Number,
+    //   required: [true, "Product price is required"],
+    //   min: [0, "Price cannot be negative"],
+    // },
     description: {
       type: String,
       maxlength: [500, "Description cannot exceed 500 characters"],
@@ -34,8 +34,15 @@ const productSchema = new mongoose.Schema(
     },
     paperTextures: [
       {
-        type: String,
-        trim: true,
+        name: {
+          type: String,
+          trim: true,
+        },
+        rate: {
+          type: Number,
+          min: [0, "Rate cannot be negative"],
+          default: 0,
+        },
       },
     ],
     colours: [

@@ -15,6 +15,8 @@ const addToCart = async (req: Request, res: Response, next: NextFunction) => {
       selectedTexture,
       name,
       image,
+      height,
+      width,
     } = req.body;
     const userId = req.user._id;
     const cart = await cartService.addToCart(
@@ -25,7 +27,9 @@ const addToCart = async (req: Request, res: Response, next: NextFunction) => {
       selectedTexture,
       name,
       image,
-      userId
+      userId,
+      height,
+      width
     );
 
     res.status(201).send({ success: true, message: "Item added", cart });
@@ -68,25 +72,6 @@ const removeFromCart = async (
   }
 };
 
-/****** Update Quantity (+ / −) ******/
-const updateQuantity = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    if (!req.user) throw new Apperror("User not authenticated", 401);
-
-    const { productId, quantity } = req.body;
-    const userId = req.user._id;
-    const cart = await cartService.updateQuantity(productId, quantity, userId);
-
-    res.status(200).send({ success: true, message: "Quantity updated", cart });
-  } catch (e) {
-    next(e);
-  }
-};
-
 /****** Merge Guest Cart ******/
 const mergeCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -110,6 +95,6 @@ export default {
   addToCart,
   getCart,
   removeFromCart,
-  updateQuantity,
+
   mergeCart,
 };

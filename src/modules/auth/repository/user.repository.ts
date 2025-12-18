@@ -2,7 +2,8 @@ import Session from "../../../models/session.schema";
 import user from "../../../models/user.schema";
 
 const findByEmail = async (email: string): Promise<any> => {
-  const existingUser = await user.findOne({ email });
+  console.log("email in repo", email);
+  const existingUser = await user.findOne({ email: email });
   return existingUser;
 };
 const createUser = async (
