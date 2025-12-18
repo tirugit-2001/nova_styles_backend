@@ -3,6 +3,10 @@ import Apperror from "../../../utils/apperror";
 import contentRepository from "../repository/content.repository";
 import { emailQueue } from "../../../queues/email.queue";
 import config from "../../../config/config";
+import InteriorEstimation from "../../../models/InteriorEstimation.schema";
+import ConstructionEstimation from "../../../models/ConstructionEstimation.schema";
+import fs from "fs";
+import path from "path";
 
 const escapeHtml = (text?: string) => {
   if (!text) return "";
@@ -18,6 +22,32 @@ const escapeHtml = (text?: string) => {
 const formatMessage = (text?: string) => {
   if (!text) return "";
   return escapeHtml(text).replace(/\n/g, "<br>");
+};
+
+// Helper function to save PDF attachment to filesystem
+const saveAttachmentToFile = async (
+  attachment: Express.Multer.File,
+  estimationId: string,
+  type: "interior" | "construction"
+): Promise<string> => {
+  // Create attachments directory if it doesn't exist
+  const attachmentsDir = path.join(process.cwd(), "attachments", type);
+  if (!fs.existsSync(attachmentsDir)) {
+    fs.mkdirSync(attachmentsDir, { recursive: true });
+  }
+
+  // Generate unique filename: timestamp-estimationId-originalname
+  const timestamp = Date.now();
+  const sanitizedOriginalName = (attachment.originalname || "attachment.pdf")
+    .replace(/[^a-zA-Z0-9.-]/g, "_");
+  const fileName = `${timestamp}-${estimationId}-${sanitizedOriginalName}`;
+  const filePath = path.join(attachmentsDir, fileName);
+
+  // Write file to disk
+  fs.writeFileSync(filePath, attachment.buffer);
+
+  // Return relative path for storage in database
+  return path.join("attachments", type, fileName);
 };
 
 const createContent = async (data: any, file?: Express.Multer.File) => {
@@ -424,6 +454,57 @@ const sendInteriorDesignNotification = async (
     const job = await emailQueue.add("interiorDesignNotification", jobData);
 
     console.log("✅ Interior design notification email job added successfully:", job.id);
+
+    // Save to database after successfully queuing email
+    try {
+      const estimationData: any = {
+        name: formData.name,
+        email: formData.email,
+        mobile: formData.mobile,
+        pincode: formData.pincode,
+        whatsappUpdates: formData.whatsappUpdates || false,
+        interiorType: formData.interiorType,
+        floorplan: formData.floorplan,
+        purpose: formData.purpose,
+        selectedPackage: formData.selectedPackage,
+        addons: formData.addons || [],
+        packagePrice: formData.packagePrice,
+        addonsTotal: formData.addonsTotal,
+        totalPrice: formData.totalPrice,
+        message: formData.message,
+        hasAttachment: !!attachment,
+        attachmentFilename: attachment ? (attachment.originalname || "project-brief.pdf") : undefined,
+      };
+
+      // Create estimation first to get ID
+      const createdEstimation = await InteriorEstimation.create(estimationData);
+      
+      // Save attachment to filesystem if present
+      if (attachment) {
+        try {
+          const attachmentFilePath = await saveAttachmentToFile(
+            attachment,
+            String(createdEstimation._id),
+            "interior"
+          );
+          
+          // Update estimation with file path
+          createdEstimation.attachmentFilePath = attachmentFilePath;
+          await createdEstimation.save();
+          
+          console.log("✅ Interior estimation saved to database with attachment");
+        } catch (fileError) {
+          console.error("❌ Error saving attachment file:", fileError);
+          // Estimation is already saved, just without file path
+        }
+      } else {
+        console.log("✅ Interior estimation saved to database");
+      }
+    } catch (dbError) {
+      // Log error but don't fail the request - email was already queued
+      console.error("❌ Error saving interior estimation to database:", dbError);
+    }
+
     return job;
   } catch (error) {
     console.error("❌ Error adding interior design notification email job:", error);
@@ -869,6 +950,62 @@ const sendConstructionNotification = async (
     const job = await emailQueue.add("constructionNotification", jobData);
 
     console.log("✅ Construction notification email job added successfully:", job.id);
+
+    // Save to database after successfully queuing email
+    try {
+      const estimationData: any = {
+        name: formData.name,
+        email: formData.email,
+        mobile: formData.mobile,
+        pincode: formData.pincode,
+        whatsappUpdates: formData.whatsappUpdates || false,
+        projectType: formData.projectType,
+        buildingType: formData.buildingType,
+        plotSize: formData.plotSize,
+        builtUpArea: formData.builtUpArea,
+        sqft: formData.sqft,
+        ratePerSqft: formData.ratePerSqft,
+        selectedPackage: formData.selectedPackage,
+        packagePrice: formData.packagePrice,
+        totalPrice: formData.totalPrice || formData.estimatedPrice,
+        estimatedPrice: formData.estimatedPrice,
+        requirements: formData.requirements,
+        message: formData.message,
+        suggestions: formData.suggestions,
+        constructionType: formData.constructionType,
+        hasAttachment: !!attachment,
+        attachmentFilename: attachment ? (attachment.originalname || "project-brief.pdf") : undefined,
+      };
+
+      // Create estimation first to get ID
+      const createdEstimation = await ConstructionEstimation.create(estimationData);
+      
+      // Save attachment to filesystem if present
+      if (attachment) {
+        try {
+          const attachmentFilePath = await saveAttachmentToFile(
+            attachment,
+            String(createdEstimation._id),
+            "construction"
+          );
+          
+          // Update estimation with file path
+          createdEstimation.attachmentFilePath = attachmentFilePath;
+          await createdEstimation.save();
+          
+          console.log("✅ Construction estimation saved to database with attachment");
+        } catch (fileError) {
+          console.error("❌ Error saving attachment file:", fileError);
+          // Estimation is already saved, just without file path
+        }
+      } else {
+        console.log("✅ Construction estimation saved to database");
+      }
+    } catch (dbError) {
+      // Log error but don't fail the request - email was already queued
+      console.error("❌ Error saving construction estimation to database:", dbError);
+    }
+
     return job;
   } catch (error) {
     console.error("❌ Error adding construction notification email job:", error);

@@ -10,7 +10,7 @@ import cookieParser from "cookie-parser";
 const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
-
+  "http://localhost:5174",
   "https://nova-styles-admin.vercel.app",
   "https://nova-styles-frontend.vercel.app",
   "https://www.novastylesinterior.com",

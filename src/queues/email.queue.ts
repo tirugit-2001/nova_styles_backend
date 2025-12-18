@@ -2,14 +2,19 @@ import { Queue, Worker } from "bullmq";
 import nodemailer from "nodemailer";
 import config from "../config/config";
 
-const connection = {
+const connection: any = {
   host: config.redis_host,
   port: Number(config.redis_port),
-  password: config.redis_password,
   // tls: {
   //   rejectUnauthorized: false, // allow secure connection
   // },
 };
+
+// Only add password if it's provided and not empty
+// This allows Redis to work both with and without password authentication
+if (config.redis_password && config.redis_password.trim() !== "") {
+  connection.password = config.redis_password;
+}
 
 const createLogOnce = () => {
   let logged = false;
@@ -34,6 +39,24 @@ try {
         delay: 2000,
       },
     },
+  });
+
+  emailQueue.on("error", (err) => {
+    if (
+      err &&
+      typeof err === "object" &&
+      "message" in err &&
+      typeof (err as Error).message === "string"
+    ) {
+      const errorMessage = (err as Error).message;
+      
+      if (errorMessage.includes("WRONGPASS") || errorMessage.includes("invalid username-password")) {
+        logErrorOnce(
+          "⚠️  Redis authentication failed. Check your REDIS_PASSWORD in .env file. If Redis doesn't require a password, remove or leave REDIS_PASSWORD empty.",
+          err
+        );
+      }
+    }
   });
 
   const transporter = nodemailer.createTransport({
@@ -124,14 +147,23 @@ try {
       err &&
       typeof err === "object" &&
       "message" in err &&
-      typeof (err as Error).message === "string" &&
-      ((err as Error).message.includes("ECONNREFUSED") ||
-        (err as Error).message.includes("6379"))
+      typeof (err as Error).message === "string"
     ) {
-      logErrorOnce(
-        "⚠️  Redis connection error (Redis not running). Email queue will not work until Redis is started.",
-        err
-      );
+      const errorMessage = (err as Error).message;
+      
+      if (errorMessage.includes("ECONNREFUSED") || errorMessage.includes("6379")) {
+        logErrorOnce(
+          "⚠️  Redis connection error (Redis not running). Email queue will not work until Redis is started.",
+          err
+        );
+      } else if (errorMessage.includes("WRONGPASS") || errorMessage.includes("invalid username-password")) {
+        logErrorOnce(
+          "⚠️  Redis authentication failed. Check your REDIS_PASSWORD in .env file. If Redis doesn't require a password, remove or leave REDIS_PASSWORD empty.",
+          err
+        );
+      } else {
+        console.error("❌ Worker error:", err);
+      }
     } else {
       console.error("❌ Worker error:", err);
     }

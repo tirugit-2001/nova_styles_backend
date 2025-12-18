@@ -10,7 +10,7 @@ import WebFrontRounter from "../modules/webFront/routes";
 import userrouter from "../modules/users/routes";
 import contentrouter from "../modules/content/route.ts/content.route";
 import portfoliorouter from "../modules/portfolio/routes/portfolio.route";
-import adminOrderRoutes from "../modules/admin/routes/order.route";
+import adminRoutes from "../modules/admin/routes";
 router.use("/auth", authrouter);
 router.use("/product", productrouter);
 router.use("/cart", cartrouter);
@@ -20,6 +20,6 @@ router.use("/heroContent", WebFrontRounter);
 router.use("/users", userrouter);
 router.use("/content", contentrouter);
 router.use("/portfolioContent", portfoliorouter);
-router.use("/admin/orders", adminOrderRoutes);
+router.use("/admin", adminRoutes);
 
 export default router;
