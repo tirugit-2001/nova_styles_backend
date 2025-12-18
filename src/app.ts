@@ -1,7 +1,6 @@
 import helmet from "helmet";
 import cors from "cors";
-import express from "express";
-import { Request, Response } from "express";
+import express, { Request, Response } from "express";
 import router from "./routes";
 import { specs, swaggerUi } from "./config/swaggerConfig";
 import errorHandler from "./middlewares/errormiddleware";
@@ -19,7 +18,10 @@ const allowedOrigins = [
 ];
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void
+    ) => {
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
