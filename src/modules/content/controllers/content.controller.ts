@@ -136,7 +136,7 @@ const postContactForm = async (
     const validatedData = validate(interiorFormSchema, req.body);
 
     // Send email notification to admin
-    const job = await contentService.sendInteriorDesignNotification(
+    await contentService.sendInteriorDesignNotification(
       validatedData,
       req.file ?? undefined
     );

@@ -7,7 +7,12 @@ type BaseEmailPayload = {
   html: string;
   attachments?: any[];
 };
-
+console.log(
+  config.smtp_host,
+  config.smtp_port,
+  config.smtp_user,
+  config.smtp_pass
+);
 const transporter = nodemailer.createTransport({
   host: config.smtp_host,
   port: Number(config.smtp_port),

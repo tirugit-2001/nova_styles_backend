@@ -1,7 +1,12 @@
 import { Worker } from "bullmq";
 import nodemailer from "nodemailer";
 import config from "../config/config";
-
+console.log(
+  config.smtp_host,
+  config.smtp_port,
+  config.smtp_user,
+  config.smtp_pass
+);
 const connection = {
   host: config.redis_host,
   port: Number(config.redis_port),
