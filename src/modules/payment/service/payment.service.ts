@@ -188,13 +188,13 @@ const verifyPayment = async (data: any) => {
 
     await session.commitTransaction();
     session.endSession();
-    if (userEmail) {
-      console.log("sendidnddnnddndndndndnd");
-      console.log(userEmail);
-      sendPaymentSuccessEmail(userEmail, order).catch((err) =>
-        console.error("Error adding email job:", err)
-      );
-    }
+    // if (userEmail) {
+    //   console.log("sendidnddnnddndndndndnd");
+    //   console.log(userEmail);
+    //   sendPaymentSuccessEmail(userEmail, order).catch((err) =>
+    //     console.error("Error adding email job:", err)
+    //   );
+    // }
 
     return { payment: paymentDoc, order };
   } catch (err) {
