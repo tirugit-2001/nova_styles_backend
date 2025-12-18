@@ -7,7 +7,6 @@ import Apperror from "../../../utils/apperror";
 import productRepository from "../../products/repository/product.repository";
 import cartRepository from "../../cart/repository/cart.repository";
 import { sendPaymentSuccessEmail } from "../../../helpers/sendemail";
-import { height } from "pdfkit/js/page";
 /********create payment order**********/
 const createPaymentOrder = async (
   userId: string,

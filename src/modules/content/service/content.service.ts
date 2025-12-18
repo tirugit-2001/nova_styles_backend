@@ -1,8 +1,8 @@
 import { deleteImage, uploadImage } from "../../../config/cloudinary";
 import Apperror from "../../../utils/apperror";
 import contentRepository from "../repository/content.repository";
-import { emailQueue } from "../../../queues/email.queue";
 import config from "../../../config/config";
+import { sendEmail } from "../../../helpers/sendemail";
 
 const escapeHtml = (text?: string) => {
   if (!text) return "";
@@ -64,13 +64,6 @@ const sendInteriorDesignNotification = async (
   formData: any,
   attachment?: Express.Multer.File
 ) => {
-  if (!emailQueue) {
-    console.warn(
-      "⚠️  Email queue is not available (Redis not running). Email will not be sent."
-    );
-    throw new Apperror("Email service is currently unavailable", 503);
-  }
-
   if (!config.adminEmail) {
     throw new Apperror("Admin email is not configured", 500);
   }
@@ -405,14 +398,14 @@ const sendInteriorDesignNotification = async (
   }
 
   try {
-    const jobData: Record<string, any> = {
+    const mailData: Record<string, any> = {
       to: config.adminEmail,
       subject: emailSubject,
       html: htmlEmail,
     };
 
     if (attachment) {
-      jobData.attachments = [
+      mailData.attachments = [
         {
           filename: attachment.originalname || "project-brief.pdf",
           content: attachment.buffer,
@@ -421,12 +414,12 @@ const sendInteriorDesignNotification = async (
       ];
     }
 
-    const job = await emailQueue.add("interiorDesignNotification", jobData);
+    await sendEmail(mailData);
 
-    console.log("✅ Interior design notification email job added successfully:", job.id);
-    return job;
+    console.log("✅ Interior design notification email sent successfully");
+    return true;
   } catch (error) {
-    console.error("❌ Error adding interior design notification email job:", error);
+    console.error("❌ Error sending interior design notification email:", error);
     throw error;
   }
 };
@@ -435,13 +428,6 @@ const sendConstructionNotification = async (
   formData: any,
   attachment?: Express.Multer.File
 ) => {
-  if (!emailQueue) {
-    console.warn(
-      "⚠️  Email queue is not available (Redis not running). Email will not be sent."
-    );
-    throw new Apperror("Email service is currently unavailable", 503);
-  }
-
   if (!config.adminEmail) {
     throw new Apperror("Admin email is not configured", 500);
   }
@@ -850,14 +836,14 @@ const sendConstructionNotification = async (
   }
 
   try {
-    const jobData: Record<string, any> = {
+    const mailData: Record<string, any> = {
       to: config.adminEmail,
       subject: emailSubject,
       html: htmlEmail,
     };
 
     if (attachment) {
-      jobData.attachments = [
+      mailData.attachments = [
         {
           filename: attachment.originalname || "project-brief.pdf",
           content: attachment.buffer,
@@ -866,12 +852,12 @@ const sendConstructionNotification = async (
       ];
     }
 
-    const job = await emailQueue.add("constructionNotification", jobData);
+    await sendEmail(mailData);
 
-    console.log("✅ Construction notification email job added successfully:", job.id);
-    return job;
+    console.log("✅ Construction notification email sent successfully");
+    return true;
   } catch (error) {
-    console.error("❌ Error adding construction notification email job:", error);
+    console.error("❌ Error sending construction notification email:", error);
     throw error;
   }
 };

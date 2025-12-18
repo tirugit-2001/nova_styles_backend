@@ -1,88 +1,67 @@
-import { emailQueue } from "../queues/email.queue";
+import nodemailer from "nodemailer";
+import config from "../config/config";
 
-const enqueueEmail = async (
-  jobName: string,
-  data: { to: string; subject: string; html: string }
-) => {
-  if (!emailQueue) {
-    console.warn(
-      "Email queue is not available (Redis not running). Email will not be sent."
-    );
-    return null;
-  }
+type BaseEmailPayload = {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: any[];
+};
 
+const transporter = nodemailer.createTransport({
+  host: config.smtp_host,
+  port: Number(config.smtp_port),
+  secure: Number(config.smtp_port) === 465,
+  auth: {
+    user: config.smtp_user,
+    pass: config.smtp_pass,
+  },
+});
+
+const sendEmail = async (payload: any) => {
   try {
-    const job = await emailQueue.add(jobName, data);
-    return job;
+    await transporter.sendMail({
+      from: config.smtp_user,
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      attachments: payload.attachments,
+    });
+    console.log(
+      `Email sent to ${payload.to} with subject "${payload.subject}"`
+    );
   } catch (error) {
-    console.error("Error adding email job:", error);
+    console.error("Error sending email:", error);
     throw error;
   }
 };
 
 const sendPaymentSuccessEmail = async (userEmail: string, order: any) => {
-  console.log("Attempting to add email job for:", userEmail);
-
-  if (!emailQueue) {
-    console.warn(
-      "Email queue is not available (Redis not running). Email will not be sent."
-    );
-    return null;
-  }
-
-  try {
-    const job = await enqueueEmail("sendPaymentEmail", {
-      to: userEmail,
-      subject: "Payment Successful! Order Confirmed",
-      html: `
-        <h1>Thank you for your order!</h1>
-        <p>Your payment has been successfully processed.</p>
-        <p><strong>Order ID:</strong> ${order._id}</p>
-        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
-        <p>We will start processing your order soon.</p>
-      `,
-    });
-
-    if (job) {
-      console.log("Email job added successfully:", job.id);
-    }
-    return job;
-  } catch (error) {
-    console.error("Error adding email job:", error);
-    throw error;
-  }
+  return sendEmail({
+    to: userEmail,
+    subject: "Payment Successful! Order Confirmed",
+    html: `
+      <h1>Thank you for your order!</h1>
+      <p>Your payment has been successfully processed.</p>
+      <p><strong>Order ID:</strong> ${order._id}</p>
+      <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+      <p>We will start processing your order soon.</p>
+    `,
+  });
 };
 
 const sendPaymentFailedEmail = async (userEmail: string) => {
-  console.log("Attempting to add email job for:", userEmail);
-
-  if (!emailQueue) {
-    console.warn(
-      "Email queue is not available (Redis not running). Email will not be sent."
-    );
-    return null;
-  }
-
-  try {
-    const job = await enqueueEmail("sendPaymentEmail", {
-      to: userEmail,
-      subject: "Payment Failed! Order Not Processed",
-      html: `
-        <h1>Payment Failed</h1>
-        <p>Unfortunately, your payment could not be processed.</p>
-        <p>Please try again or contact support for assistance.</p>
-      `,
-    });
-
-    if (job) {
-      console.log("Email job added successfully:", job.id);
-    }
-    return job;
-  } catch (error) {
-    console.error("Error adding email job:", error);
-    throw error;
-  }
+  return sendEmail({
+    to: userEmail,
+    subject: "Payment Failed! Order Not Processed",
+    html: `
+      <h1>Payment Failed</h1>
+      <p>Unfortunately, your payment could not be processed.</p>
+      <p>Please try again or contact support for assistance.</p>
+    `,
+  });
 };
+
 const sendOrderUpdateEmail = async (
   userEmail: string,
   payload: {
@@ -99,8 +78,6 @@ const sendOrderUpdateEmail = async (
     message?: string;
   }
 ) => {
-  console.log("Attempting to add order update email job for:", userEmail);
-
   const { orderNumber, status, totalAmount, tracking, customerName, message } =
     payload;
 
@@ -128,7 +105,7 @@ const sendOrderUpdateEmail = async (
     ? `<p>${message}</p>`
     : "<p>We wanted to let you know the latest status of your order.</p>";
 
-  await enqueueEmail("sendOrderUpdateEmail", {
+  return sendEmail({
     to: userEmail,
     subject: `Update for Order ${orderNumber}`,
     html: `
@@ -147,7 +124,9 @@ const sendOrderUpdateEmail = async (
     `,
   });
 };
+
 export {
+  sendEmail,
   sendPaymentSuccessEmail,
   sendPaymentFailedEmail,
   sendOrderUpdateEmail,
