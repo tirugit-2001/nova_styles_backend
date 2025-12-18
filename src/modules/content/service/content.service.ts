@@ -491,80 +491,80 @@ const sendInteriorDesignNotification = async (
   }
 
   try {
-    const mailData: Record<string, any> = {
-      to: config.adminEmail,
-      subject: emailSubject,
-      html: htmlEmail,
+    // Save to database FIRST - this is critical, email is optional
+    const estimationData: any = {
+      name: formData.name,
+      email: formData.email,
+      mobile: formData.mobile,
+      pincode: formData.pincode,
+      whatsappUpdates: formData.whatsappUpdates || false,
+      interiorType: formData.interiorType,
+      floorplan: formData.floorplan,
+      purpose: formData.purpose,
+      selectedPackage: formData.selectedPackage,
+      addons: formData.addons || [],
+      packagePrice: formData.packagePrice,
+      addonsTotal: formData.addonsTotal,
+      totalPrice: formData.totalPrice,
+      message: formData.message,
+      hasAttachment: !!attachment,
+      attachmentFilename: attachment ? (attachment.originalname || "project-brief.pdf") : undefined,
     };
 
+    // Create estimation first to get ID
+    const createdEstimation = await InteriorEstimation.create(estimationData);
+    
+    // Save attachment to filesystem if present
     if (attachment) {
-      mailData.attachments = [
-        {
-          filename: attachment.originalname || "project-brief.pdf",
-          content: attachment.buffer,
-          contentType: attachment.mimetype || "application/pdf",
-        },
-      ];
+      try {
+        const attachmentFilePath = await saveAttachmentToFile(
+          attachment,
+          String(createdEstimation._id),
+          "interior"
+        );
+        
+        // Update estimation with file path
+        createdEstimation.attachmentFilePath = attachmentFilePath;
+        await createdEstimation.save();
+        
+        console.log("✅ Interior estimation saved to database with attachment");
+      } catch (fileError) {
+        console.error("❌ Error saving attachment file:", fileError);
+        // Estimation is already saved, just without file path
+      }
+    } else {
+      console.log("✅ Interior estimation saved to database");
     }
 
-    await sendEmail(mailData);
-
-    console.log("✅ Interior design notification email sent successfully");
-
-    // Save to database after successfully queuing email
+    // Try to send email (optional - don't block if it fails)
     try {
-      const estimationData: any = {
-        name: formData.name,
-        email: formData.email,
-        mobile: formData.mobile,
-        pincode: formData.pincode,
-        whatsappUpdates: formData.whatsappUpdates || false,
-        interiorType: formData.interiorType,
-        floorplan: formData.floorplan,
-        purpose: formData.purpose,
-        selectedPackage: formData.selectedPackage,
-        addons: formData.addons || [],
-        packagePrice: formData.packagePrice,
-        addonsTotal: formData.addonsTotal,
-        totalPrice: formData.totalPrice,
-        message: formData.message,
-        hasAttachment: !!attachment,
-        attachmentFilename: attachment ? (attachment.originalname || "project-brief.pdf") : undefined,
+      const mailData: Record<string, any> = {
+        to: config.adminEmail,
+        subject: emailSubject,
+        html: htmlEmail,
       };
 
-      // Create estimation first to get ID
-      const createdEstimation = await InteriorEstimation.create(estimationData);
-      
-      // Save attachment to filesystem if present
       if (attachment) {
-        try {
-          const attachmentFilePath = await saveAttachmentToFile(
-            attachment,
-            String(createdEstimation._id),
-            "interior"
-          );
-          
-          // Update estimation with file path
-          createdEstimation.attachmentFilePath = attachmentFilePath;
-          await createdEstimation.save();
-          
-          console.log("✅ Interior estimation saved to database with attachment");
-        } catch (fileError) {
-          console.error("❌ Error saving attachment file:", fileError);
-          // Estimation is already saved, just without file path
-        }
-      } else {
-        console.log("✅ Interior estimation saved to database");
+        mailData.attachments = [
+          {
+            filename: attachment.originalname || "project-brief.pdf",
+            content: attachment.buffer,
+            contentType: attachment.mimetype || "application/pdf",
+          },
+        ];
       }
-    } catch (dbError) {
-      // Log error but don't fail the request - email was already sent
-      console.error("❌ Error saving interior estimation to database:", dbError);
+
+      await sendEmail(mailData);
+      console.log("📧 Interior design notification email queued (optional)");
+    } catch (emailError) {
+      // Email is optional - log but don't fail
+      console.warn("⚠️  Email sending failed (non-blocking):", emailError);
     }
 
     return true;
   } catch (error) {
     console.error(
-      "❌ Error sending interior design notification email:",
+      "❌ Error in interior design notification:",
       error
     );
     throw error;
@@ -1001,84 +1001,84 @@ const sendConstructionNotification = async (
   }
 
   try {
-    const mailData: Record<string, any> = {
-      to: config.adminEmail,
-      subject: emailSubject,
-      html: htmlEmail,
+    // Save to database FIRST - this is critical, email is optional
+    const estimationData: any = {
+      name: formData.name,
+      email: formData.email,
+      mobile: formData.mobile,
+      pincode: formData.pincode,
+      whatsappUpdates: formData.whatsappUpdates || false,
+      projectType: formData.projectType,
+      buildingType: formData.buildingType,
+      plotSize: formData.plotSize,
+      builtUpArea: formData.builtUpArea,
+      sqft: formData.sqft,
+      ratePerSqft: formData.ratePerSqft,
+      selectedPackage: formData.selectedPackage,
+      packagePrice: formData.packagePrice,
+      totalPrice: formData.totalPrice || formData.estimatedPrice,
+      estimatedPrice: formData.estimatedPrice,
+      requirements: formData.requirements,
+      message: formData.message,
+      suggestions: formData.suggestions,
+      constructionType: formData.constructionType,
+      hasAttachment: !!attachment,
+      attachmentFilename: attachment ? (attachment.originalname || "project-brief.pdf") : undefined,
     };
 
+    // Create estimation first to get ID
+    const createdEstimation = await ConstructionEstimation.create(estimationData);
+    
+    // Save attachment to filesystem if present
     if (attachment) {
-      mailData.attachments = [
-        {
-          filename: attachment.originalname || "project-brief.pdf",
-          content: attachment.buffer,
-          contentType: "application/pdf",
-        },
-      ];
+      try {
+        const attachmentFilePath = await saveAttachmentToFile(
+          attachment,
+          String(createdEstimation._id),
+          "construction"
+        );
+        
+        // Update estimation with file path
+        createdEstimation.attachmentFilePath = attachmentFilePath;
+        await createdEstimation.save();
+        
+        console.log("✅ Construction estimation saved to database with attachment");
+      } catch (fileError) {
+        console.error("❌ Error saving attachment file:", fileError);
+        // Estimation is already saved, just without file path
+      }
+    } else {
+      console.log("✅ Construction estimation saved to database");
     }
 
-    await sendEmail(mailData);
-
-    console.log("✅ Construction notification email sent successfully");
-
-    // Save to database after successfully queuing email
+    // Try to send email (optional - don't block if it fails)
     try {
-      const estimationData: any = {
-        name: formData.name,
-        email: formData.email,
-        mobile: formData.mobile,
-        pincode: formData.pincode,
-        whatsappUpdates: formData.whatsappUpdates || false,
-        projectType: formData.projectType,
-        buildingType: formData.buildingType,
-        plotSize: formData.plotSize,
-        builtUpArea: formData.builtUpArea,
-        sqft: formData.sqft,
-        ratePerSqft: formData.ratePerSqft,
-        selectedPackage: formData.selectedPackage,
-        packagePrice: formData.packagePrice,
-        totalPrice: formData.totalPrice || formData.estimatedPrice,
-        estimatedPrice: formData.estimatedPrice,
-        requirements: formData.requirements,
-        message: formData.message,
-        suggestions: formData.suggestions,
-        constructionType: formData.constructionType,
-        hasAttachment: !!attachment,
-        attachmentFilename: attachment ? (attachment.originalname || "project-brief.pdf") : undefined,
+      const mailData: Record<string, any> = {
+        to: config.adminEmail,
+        subject: emailSubject,
+        html: htmlEmail,
       };
 
-      // Create estimation first to get ID
-      const createdEstimation = await ConstructionEstimation.create(estimationData);
-      
-      // Save attachment to filesystem if present
       if (attachment) {
-        try {
-          const attachmentFilePath = await saveAttachmentToFile(
-            attachment,
-            String(createdEstimation._id),
-            "construction"
-          );
-          
-          // Update estimation with file path
-          createdEstimation.attachmentFilePath = attachmentFilePath;
-          await createdEstimation.save();
-          
-          console.log("✅ Construction estimation saved to database with attachment");
-        } catch (fileError) {
-          console.error("❌ Error saving attachment file:", fileError);
-          // Estimation is already saved, just without file path
-        }
-      } else {
-        console.log("✅ Construction estimation saved to database");
+        mailData.attachments = [
+          {
+            filename: attachment.originalname || "project-brief.pdf",
+            content: attachment.buffer,
+            contentType: "application/pdf",
+          },
+        ];
       }
-    } catch (dbError) {
-      // Log error but don't fail the request - email was already queued
-      console.error("❌ Error saving construction estimation to database:", dbError);
+
+      await sendEmail(mailData);
+      console.log("📧 Construction notification email queued (optional)");
+    } catch (emailError) {
+      // Email is optional - log but don't fail
+      console.warn("⚠️  Email sending failed (non-blocking):", emailError);
     }
 
     return true;
   } catch (error) {
-    console.error("❌ Error sending construction notification email:", error);
+    console.error("❌ Error in construction notification:", error);
     throw error;
   }
 };

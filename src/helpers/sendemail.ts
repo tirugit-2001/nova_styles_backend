@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { emailQueue } from "../queues/email.queue";
 import config from "../config/config";
 
 type BaseEmailPayload = {
@@ -7,40 +7,34 @@ type BaseEmailPayload = {
   html: string;
   attachments?: any[];
 };
-console.log(
-  config.smtp_host,
-  config.smtp_port,
-  config.smtp_user,
-  config.smtp_pass
-);
-const transporter = nodemailer.createTransport({
-  host: config.smtp_host,
-  port: Number(config.smtp_port),
-  secure: Number(config.smtp_port) === 465,
-  auth: {
-    user: config.smtp_user,
-    pass: config.smtp_pass,
-  },
-  connectionTimeout: 20_000,
-  logger: true,
-  debug: true,
-});
 
 const sendEmail = async (payload: any) => {
   try {
-    await transporter.sendMail({
-      from: config.smtp_user,
+    // Use email queue instead of direct SMTP to avoid timeouts
+    // Email is optional - if it fails, we don't want to block the request
+    if (!emailQueue) {
+      console.warn(
+        "⚠️  Email queue is not available (Redis not running). Email will not be sent."
+      );
+      return null; // Don't throw, just return null
+    }
+
+    const job = await emailQueue.add("sendEmail", {
       to: payload.to,
       subject: payload.subject,
       html: payload.html,
       attachments: payload.attachments,
     });
+
     console.log(
-      `Email sent to ${payload.to} with subject "${payload.subject}"`
+      `📧 Email job added to queue for ${payload.to} with subject "${payload.subject}" (Job ID: ${job.id})`
     );
+    
+    return job;
   } catch (error) {
-    console.error("Error sending email:", error);
-    throw error;
+    // Don't throw - email is optional, just log the error
+    console.error("⚠️  Error adding email to queue (non-blocking):", error);
+    return null;
   }
 };
 
